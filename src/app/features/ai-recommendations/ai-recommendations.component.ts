@@ -23,7 +23,7 @@ import { DataService } from '../../core/services/data.service';
           <h2>Dành riêng cho bạn — Độ phù hợp cao nhất</h2>
           <div class="ai-grid top-grid">
             <div *ngFor="let course of dataService.courses().slice(0, 3)" class="ai-card card">
-              <div class="ai-card-image">📦</div>
+              <div class="ai-card-image"><i class="fa-solid fa-box"></i></div>
               <span class="match-badge badge badge-primary">🤖 {{ course.aiMatch }}% phù hợp</span>
               <div class="ai-card-body">
                 <h3>{{ course.title }}</h3>
@@ -43,7 +43,7 @@ import { DataService } from '../../core/services/data.service';
           <h2>Người học tương tự bạn cũng xem</h2>
           <div class="ai-grid bottom-grid">
             <div *ngFor="let course of dataService.courses().slice(4)" class="ai-card-sm card">
-              <div class="ai-sm-image">📦</div>
+              <div class="ai-sm-image"><i class="fa-solid fa-box"></i></div>
               <div class="ai-sm-body">
                 <h4>{{ course.title }}</h4>
                 <span class="ai-price-sm">{{ course.price | number }}đ</span>

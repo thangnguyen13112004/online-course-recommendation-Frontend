@@ -1,16 +1,17 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HeaderComponent } from '../../shared/components/header/header.component';
 import { CourseCardComponent } from '../../shared/components/course-card/course-card.component';
 import { DataService } from '../../core/services/data.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, RouterLink, HeaderComponent, CourseCardComponent],
   template: `
-    <app-header [isAuthenticated]="true" />
+    <app-header />
 
     <!-- Dashboard Hero -->
     <section class="dash-hero">
@@ -18,48 +19,101 @@ import { DataService } from '../../core/services/data.service';
         <span class="dash-badge">🤖 AI đã cập nhật gợi ý mới cho bạn!</span>
         <h1>Chào mừng trở lại! 👋</h1>
         <p>Tiếp tục hành trình học tập của bạn</p>
-
-        <div class="dash-stats">
-          <div class="dash-stat"><span class="num">2</span><span class="lbl">Đang học</span></div>
-          <div class="dash-divider"></div>
-          <div class="dash-stat"><span class="num">65h</span><span class="lbl">Đã học</span></div>
-          <div class="dash-divider"></div>
-          <div class="dash-stat"><span class="num">1</span><span class="lbl">Chứng chỉ</span></div>
-          <div class="dash-divider"></div>
-          <div class="dash-stat"><span class="num">142</span><span class="lbl">Giờ tổng</span></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Search -->
-    <section class="dash-search">
-      <div class="container">
-        <div class="search-bar">
-          <span>🔍</span>
-          <input type="text" placeholder="Tìm kiếm khóa học mới..." class="form-input" style="border:none">
-          <div class="search-cat">Tất cả danh mục ▾</div>
-          <button class="btn btn-primary btn-sm">🔍 Tìm kiếm</button>
-        </div>
       </div>
     </section>
 
     <div class="container dash-content">
-      <!-- Continue Learning -->
-      <section class="section">
-        <div class="section-header">
-          <h2>► Tiếp tục học tập</h2>
-          <a routerLink="/my-courses" class="see-all">Xem tất cả →</a>
+      <!-- Stats Cards -->
+      <div class="my-stats">
+        <div class="my-stat-modern card">
+          <div class="stat-content">
+            <span class="st-val primary">{{ dataService.enrolledCourses().length }}</span>
+            <span class="st-lbl">Đang học</span>
+          </div>
+          <div class="stat-icon-modern bg-blue">
+            <i class="fa-solid fa-book-open-reader"></i>
+          </div>
         </div>
-        <div class="continue-grid">
-          <div *ngFor="let ec of dataService.enrolledCourses()" class="continue-card card">
-            <div class="cc-icon">📦</div>
-            <div class="cc-info">
-              <h3>{{ ec.course.title }}</h3>
-              <p>{{ ec.course.instructor }}</p>
+        <div class="my-stat-modern card">
+          <div class="stat-content">
+            <span class="st-val success">{{ completedCoursesCount }}</span>
+            <span class="st-lbl">Hoàn thành</span>
+          </div>
+          <div class="stat-icon-modern bg-green">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+        <div class="my-stat-modern card">
+          <div class="stat-content">
+            <span class="st-val orange">{{ dataService.enrolledCourses().length * 15 }}h</span>
+            <span class="st-lbl">Tổng giờ học</span>
+          </div>
+          <div class="stat-icon-modern bg-orange">
+            <i class="fa-solid fa-stopwatch"></i>
+          </div>
+        </div>
+        <div class="my-stat-modern card">
+          <div class="stat-content">
+            <span class="st-val purple">{{ dataService.certificates().length }}</span>
+            <span class="st-lbl">Chứng chỉ</span>
+          </div>
+          <div class="stat-icon-modern bg-purple">
+            <i class="fa-solid fa-award"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="dataService.enrolledCourses().length === 0" class="empty-state card">
+         <div class="empty-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+         <h3>Bạn chưa đăng ký khóa học nào</h3>
+         <p>Hãy khám phá các khóa học thú vị và bắt đầu hành trình học tập của bạn.</p>
+         <a routerLink="/course" class="btn btn-primary">Khám phá khóa học</a>
+      </div>
+
+      <!-- Search -->
+      <section class="dash-search">
+        <div class="search-bar">
+          <span><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" placeholder="Tìm kiếm khóa học mới..." class="form-input" style="border:none">
+          <div class="search-cat">Tất cả danh mục ▾</div>
+          <button class="btn btn-primary btn-sm"><i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm</button>
+        </div>
+      </section>
+
+      <!-- Current Courses -->
+      <section class="section" *ngIf="dataService.enrolledCourses().length > 0">
+        <div class="section-header">
+          <h2><i class="fa-solid fa-play-circle"></i> Tiếp tục học tập</h2>
+        </div>
+        <div class="enrolled-grid">
+          <div *ngFor="let ec of dataService.enrolledCourses()" class="enrolled-card card">
+            <div class="ec-icon">
+              <img *ngIf="ec.course?.image && ec.course!.image!.length > 5" [src]="ec.course?.image" (error)="ec.course!.image = ''" alt="course" style="width: 100%; height: 100%; object-fit: cover;">
+              <div *ngIf="!ec.course?.image || ec.course!.image!.length <= 5" style="font-size: 32px; display:flex; justify-content:center; align-items:center; width:100%; height:100%"><i class="fa-solid fa-box"></i></div>
+            </div>
+            <div class="ec-info">
+              <h3>{{ ec.course?.title }}</h3>
+              <p>{{ ec.course?.instructor }} • {{ ec.course?.modules }} chương</p>
               <span class="progress-text">Tiến độ: {{ ec.progress }}%</span>
               <div class="progress-bar"><div class="fill" [style.width.%]="ec.progress"></div></div>
             </div>
-            <a routerLink="/learn/python/lesson/5" class="btn btn-primary btn-sm">► Tiếp tục</a>
+            <a [routerLink]="['/learn', ec.course?.id || 'course', 'lesson', 1]" class="btn btn-primary btn-sm">► Tiếp tục</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Certificates -->
+      <section class="section" *ngIf="dataService.certificates().length > 0">
+        <h2><i class="fa-solid fa-trophy"></i> Chứng chỉ của tôi</h2>
+        <div class="cert-grid">
+          <div *ngFor="let cert of dataService.certificates()" class="cert-card card">
+            <div class="cert-icon-modern"><i class="fa-solid fa-certificate"></i></div>
+            <div class="cert-info">
+              <strong>{{ cert.courseName }}</strong>
+              <span>{{ cert.source }} • {{ cert.date }}</span>
+            </div>
+            <button class="btn btn-primary btn-sm">📥 Tải về</button>
           </div>
         </div>
       </section>
@@ -71,7 +125,7 @@ import { DataService } from '../../core/services/data.service';
           <a routerLink="/ai-recommendations" class="see-all">Xem tất cả →</a>
         </div>
         <div class="course-grid">
-          <app-course-card *ngFor="let c of dataService.courses().slice(1, 5)" [course]="c" [showCartBtn]="true" />
+          <app-course-card *ngFor="let c of dataService.courses().slice(0, 4)" [course]="c" [showCartBtn]="true" />
         </div>
       </section>
     </div>
@@ -97,22 +151,72 @@ import { DataService } from '../../core/services/data.service';
     }
     .dash-hero p {
       opacity: 0.8;
-      margin-bottom: 24px;
     }
-    .dash-stats {
+
+    .dash-content { padding: 24px 0 60px; }
+
+    /* Stats Cards */
+    .my-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    .my-stat-modern {
+      padding: 24px;
       display: flex;
       align-items: center;
-      gap: 24px;
-    }
-    .dash-stat { display: flex; flex-direction: column; }
-    .num { font-size: 24px; font-weight: 800; }
-    .lbl { font-size: 13px; opacity: 0.7; }
-    .dash-divider { width: 1px; height: 36px; background: rgba(255,255,255,0.2); }
-
-    .dash-search {
+      justify-content: space-between;
+      border: none;
       background: var(--white);
-      padding: 16px 0;
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      border-radius: 16px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .my-stat-modern:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    .stat-content {
+      display: flex;
+      flex-direction: column;
+    }
+    .st-val { font-size: 32px; font-weight: 800; line-height: 1.2; margin-bottom: 4px; }
+    .st-val.primary { color: #3B82F6; }
+    .st-val.success { color: #10B981; }
+    .st-val.orange { color: #F59E0B; }
+    .st-val.purple { color: #8B5CF6; }
+    .st-lbl { font-size: 14px; color: var(--gray-500); font-weight: 500; }
+    
+    .stat-icon-modern {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .bg-blue { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+    .bg-green { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+    .bg-orange { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+    .bg-purple { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+
+    /* Empty State */
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      margin-bottom: 28px;
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; color: var(--gray-400); }
+    .empty-state h3 { margin-bottom: 8px; }
+    .empty-state p { color: var(--gray-500); margin-bottom: 24px; }
+
+    /* Search */
+    .dash-search {
+      margin-bottom: 28px;
     }
     .search-bar {
       display: flex;
@@ -122,6 +226,7 @@ import { DataService } from '../../core/services/data.service';
       border-radius: var(--radius-md);
       padding: 0 16px;
       background: var(--white);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     }
     .search-cat {
       padding: 10px 16px;
@@ -131,7 +236,7 @@ import { DataService } from '../../core/services/data.service';
       color: var(--gray-500);
     }
 
-    .dash-content { padding: 24px 0 60px; }
+    /* Sections */
     .section { margin-bottom: 32px; }
     .section-header {
       display: flex;
@@ -139,37 +244,79 @@ import { DataService } from '../../core/services/data.service';
       justify-content: space-between;
       margin-bottom: 16px;
     }
-    .section-header h2 { font-size: 18px; font-weight: 700; }
+    .section-header h2, .section h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .section-header h2 { margin-bottom: 0; }
     .see-all { color: var(--primary); font-weight: 600; font-size: 14px; }
 
-    .continue-grid {
+    /* Enrolled Courses Grid */
+    .enrolled-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
-    .continue-card {
+    .enrolled-card {
       display: flex;
       align-items: center;
       gap: 16px;
       padding: 16px;
     }
-    .cc-icon {
-      width: 60px;
-      height: 60px;
+    .ec-icon {
+      width: 60px; height: 60px;
       background: var(--primary-bg);
       border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .ec-info { flex: 1; }
+    .ec-info h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .ec-info p { font-size: 12px; color: var(--gray-500); margin-bottom: 6px; }
+    .progress-text { font-size: 12px; color: var(--gray-500); }
+    .progress-bar { 
+      height: 6px;
+      background: var(--gray-200);
+      border-radius: 3px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .progress-bar .fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    /* Certificates */
+    .cert-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .cert-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: var(--primary-bg);
+      border-color: transparent;
+    }
+    .cert-icon-modern { 
+      width: 48px;
+      height: 48px;
+      background: rgba(139, 92, 246, 0.1);
+      color: var(--primary);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
+      font-size: 24px;
       flex-shrink: 0;
     }
-    .cc-info { flex: 1; }
-    .cc-info h3 { font-size: 14px; font-weight: 700; }
-    .cc-info p { font-size: 12px; color: var(--gray-500); margin-bottom: 4px; }
-    .progress-text { font-size: 12px; color: var(--gray-500); }
-    .progress-bar { margin-top: 4px; }
+    .cert-info { flex: 1; }
+    .cert-info strong { display: block; font-size: 14px; }
+    .cert-info span { font-size: 12px; color: var(--gray-500); }
 
+    /* Course Grid */
     .course-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -177,6 +324,18 @@ import { DataService } from '../../core/services/data.service';
     }
   `]
 })
-export class DashboardComponent {
-  constructor(public dataService: DataService) { }
+export class DashboardComponent implements OnInit {
+  public dataService = inject(DataService);
+  private authService = inject(AuthService);
+
+  get completedCoursesCount() {
+    return this.dataService.enrolledCourses().filter(c => c.progress === 100).length;
+  }
+
+  ngOnInit() {
+    if (this.authService.isLoggedIn()) {
+      this.dataService.loadMyCourses();
+      this.dataService.loadCertificates();
+    }
+  }
 }

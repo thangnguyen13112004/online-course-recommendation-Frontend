@@ -1,12 +1,14 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../../shared/components/header/header.component';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-auth',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeaderComponent],
+  imports: [CommonModule, RouterLink, FormsModule, HeaderComponent],
   template: `
     <app-header />
     <div class="auth-overlay" (click)="closeModal($event)">
@@ -18,20 +20,29 @@ import { HeaderComponent } from '../../shared/components/header/header.component
           <button class="auth-tab" [class.active]="activeTab() === 'register'" (click)="activeTab.set('register')">Đăng ký</button>
         </div>
 
+        <!-- Error/Success Messages -->
+        <div *ngIf="errorMessage()" class="alert alert-error">{{ errorMessage() }}</div>
+        <div *ngIf="successMessage()" class="alert alert-success">{{ successMessage() }}</div>
+
         <!-- Login Form -->
         <div *ngIf="activeTab() === 'login'" class="auth-form">
           <div class="form-group">
             <label>Email</label>
-            <input type="email" class="form-input" placeholder="name&#64;email.com">
+            <input type="email" class="form-input" placeholder="name&#64;email.com"
+                   [(ngModel)]="loginEmail" (keydown.enter)="onLogin()">
           </div>
           <div class="form-group">
             <label>Mật khẩu</label>
-            <input type="password" class="form-input" placeholder="••••••••">
+            <input type="password" class="form-input" placeholder="••••••••"
+                   [(ngModel)]="loginPassword" (keydown.enter)="onLogin()">
           </div>
           <div class="forgot-link">
-            <a href="#">Quên mật khẩu?</a>
+            <a href="#" (click)="onForgotPassword($event)">Quên mật khẩu?</a>
           </div>
-          <button class="btn btn-primary btn-lg" style="width:100%">Đăng nhập</button>
+          <button class="btn btn-primary btn-lg" style="width:100%"
+                  [disabled]="loading()" (click)="onLogin()">
+            {{ loading() ? '⏳ Đang xử lý...' : 'Đăng nhập' }}
+          </button>
           <div class="divider"><span>hoặc</span></div>
           <button class="btn social-btn google-btn">G  Tiếp tục với Google</button>
           <button class="btn social-btn facebook-btn">f  Tiếp tục với Facebook</button>
@@ -43,32 +54,35 @@ import { HeaderComponent } from '../../shared/components/header/header.component
             <strong>Tôi muốn đăng ký với tư cách</strong>
             <div class="role-options">
               <div class="role-option" [class.active]="selectedRole() === 'student'" (click)="selectedRole.set('student')">
-                <span class="role-icon">👨‍🎓</span>
+                <span class="role-icon">👨‍<i class="fa-solid fa-graduation-cap"></i></span>
                 <span>Học viên</span>
               </div>
               <div class="role-option" [class.active]="selectedRole() === 'instructor'" (click)="selectedRole.set('instructor')">
-                <span class="role-icon">👨‍🏫</span>
+                <span class="role-icon"><i class="fa-solid fa-chalkboard-user"></i></span>
                 <span>Giảng viên</span>
               </div>
             </div>
           </div>
           <div class="form-group">
             <label>Họ và tên</label>
-            <input type="text" class="form-input" placeholder="Họ và tên">
+            <input type="text" class="form-input" placeholder="Họ và tên" [(ngModel)]="registerName">
           </div>
           <div class="form-group">
             <label>Email</label>
-            <input type="email" class="form-input" placeholder="Email">
+            <input type="email" class="form-input" placeholder="Email" [(ngModel)]="registerEmail">
           </div>
           <div class="form-group">
             <label>Mật khẩu</label>
-            <input type="password" class="form-input" placeholder="Mật khẩu">
+            <input type="password" class="form-input" placeholder="Mật khẩu" [(ngModel)]="registerPassword">
           </div>
           <div class="form-group">
             <label>Xác nhận mật khẩu</label>
-            <input type="password" class="form-input" placeholder="Xác nhận mật khẩu">
+            <input type="password" class="form-input" placeholder="Xác nhận mật khẩu" [(ngModel)]="registerConfirmPassword">
           </div>
-          <button class="btn btn-primary btn-lg" style="width:100%">Tạo tài khoản</button>
+          <button class="btn btn-primary btn-lg" style="width:100%"
+                  [disabled]="loading()" (click)="onRegister()">
+            {{ loading() ? '⏳ Đang xử lý...' : 'Tạo tài khoản' }}
+          </button>
           <div class="divider"><span>hoặc</span></div>
           <button class="btn social-btn google-btn">G  Đăng ký với Google</button>
         </div>
@@ -209,13 +223,117 @@ import { HeaderComponent } from '../../shared/components/header/header.component
       display: block;
       margin-bottom: 4px;
     }
+    .alert {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .alert-error {
+      background: #FEE2E2;
+      color: #DC2626;
+      border: 1px solid #FECACA;
+    }
+    .alert-success {
+      background: #D1FAE5;
+      color: #059669;
+      border: 1px solid #A7F3D0;
+    }
   `]
 })
 export class AuthComponent {
+  private authService = inject(AuthService);
+  private router = inject(Router);
+
   activeTab = signal<'login' | 'register'>('login');
   selectedRole = signal<'student' | 'instructor'>('student');
+  loading = signal(false);
+  errorMessage = signal('');
+  successMessage = signal('');
+
+  // Login fields
+  loginEmail = '';
+  loginPassword = '';
+
+  // Register fields
+  registerName = '';
+  registerEmail = '';
+  registerPassword = '';
+  registerConfirmPassword = '';
 
   closeModal(event: MouseEvent) {
-    // Only close if clicking overlay
+    this.router.navigate(['/home']);
+  }
+
+  onLogin() {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    if (!this.loginEmail || !this.loginPassword) {
+      this.errorMessage.set('Vui lòng nhập đầy đủ email và mật khẩu.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.authService.login(this.loginEmail, this.loginPassword).subscribe({
+      next: (res) => {
+        this.authService.handleLoginSuccess(res);
+        this.loading.set(false);
+        this.router.navigate(['/home']);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.errorMessage.set(err.error?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
+      }
+    });
+  }
+
+  onRegister() {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    if (!this.registerName || !this.registerEmail || !this.registerPassword) {
+      this.errorMessage.set('Vui lòng nhập đầy đủ thông tin.');
+      return;
+    }
+
+    if (this.registerPassword !== this.registerConfirmPassword) {
+      this.errorMessage.set('Mật khẩu xác nhận không khớp.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.authService.register(this.registerName, this.registerEmail, this.registerPassword).subscribe({
+      next: (res) => {
+        this.loading.set(false);
+        this.successMessage.set(res.message + ' Hãy đăng nhập.');
+        this.activeTab.set('login');
+        this.loginEmail = this.registerEmail;
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.errorMessage.set(err.error?.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      }
+    });
+  }
+
+  onForgotPassword(event: Event) {
+    event.preventDefault();
+    if (!this.loginEmail) {
+      this.errorMessage.set('Vui lòng nhập email của bạn trước.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.authService.forgotPassword(this.loginEmail).subscribe({
+      next: (res) => {
+        this.loading.set(false);
+        this.successMessage.set(res.message);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.errorMessage.set(err.error?.message || 'Có lỗi xảy ra.');
+      }
+    });
   }
 }

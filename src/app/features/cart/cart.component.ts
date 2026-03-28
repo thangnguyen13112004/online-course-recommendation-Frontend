@@ -1,57 +1,60 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { HeaderComponent } from '../../shared/components/header/header.component';
 import { DataService } from '../../core/services/data.service';
+import { ApiService } from '../../core/services/api.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
   imports: [CommonModule, RouterLink, HeaderComponent],
   template: `
-    <app-header [isAuthenticated]="true" />
+    <app-header />
     <div class="container cart-page">
       <div class="cart-body">
         <!-- Cart Items -->
         <div class="cart-main">
-          <h1>🛒 Giỏ hàng</h1>
+          <h1><i class="fa-solid fa-cart-shopping"></i> Giỏ hàng</h1>
           <p class="cart-count">{{ dataService.cartItems().length }} khóa học</p>
 
+          <div *ngIf="dataService.loadingCart()" style="padding: 40px; text-align: center;">
+             <p>Đang tải giỏ hàng...</p>
+          </div>
+
+          <div *ngIf="!dataService.loadingCart() && dataService.cartItems().length === 0" style="padding: 40px; text-align: center; background: var(--white); border-radius: var(--radius-lg); margin-bottom: 24px;">
+             <h3>Giỏ hàng của bạn đang trống</h3>
+             <a routerLink="/course" class="btn btn-primary mt-4">Tiếp tục mua sắm</a>
+          </div>
+
           <div *ngFor="let item of dataService.cartItems()" class="cart-item card">
-            <div class="item-thumb">📦</div>
+            <div class="item-thumb" style="cursor: pointer" routerLink="/course/{{item.course?.id}}">
+              <img *ngIf="item.course?.image && item.course!.image!.length > 5" [src]="item.course?.image" (error)="item.course!.image = ''" alt="course" style="width: 100%; height: 100%; object-fit: cover;">
+              <div *ngIf="!item.course?.image || item.course!.image!.length <= 5" style="font-size: 36px; display:flex; justify-content:center; align-items:center; width:100%; height:100%"><i class="fa-solid fa-box"></i></div>
+            </div>
             <div class="item-info">
-              <h3>{{ item.course.title }}</h3>
-              <p>{{ item.course.instructor }}</p>
-              <p class="item-meta">{{ item.course.hours }} giờ • {{ item.course.level }}</p>
+              <h3 style="cursor: pointer" routerLink="/course/{{item.course?.id}}">{{ item.course?.title }}</h3>
+              <p>{{ item.course?.instructor }}</p>
               <div class="item-actions">
-                <button class="action-link danger">🗑️ Xóa</button>
-                <button class="action-link">♡ Lưu sau</button>
+                <button class="action-link danger" (click)="removeItem(item.course?.id)"><i class="fa-solid fa-trash"></i> Xóa</button>
               </div>
             </div>
             <div class="item-price">
-              <span class="price-current">{{ item.course.price | number }}đ</span>
-              <span class="price-old">{{ item.course.originalPrice | number }}đ</span>
+              <span class="price-current">{{ item.course?.price | number }}đ</span>
+              <span class="price-old" *ngIf="item.course?.originalPrice && item.course!.originalPrice! > item.course!.price!">{{ item.course?.originalPrice | number }}đ</span>
             </div>
-          </div>
-
-          <!-- AI Suggestion -->
-          <div class="ai-suggest card">
-            <div class="ai-suggest-header">
-              <span>🤖 AI gợi ý thêm:</span>
-            </div>
-            <p>Dựa trên giỏ hàng, AI gợi ý Python Bootcamp — phù hợp 94% với lộ trình học của bạn</p>
-            <button class="btn btn-outline btn-sm">+ Thêm vào giỏ</button>
           </div>
         </div>
 
         <!-- Order Summary -->
-        <aside class="cart-sidebar">
+        <aside class="cart-sidebar" *ngIf="dataService.cartItems().length > 0">
           <div class="summary-card card">
             <h3>Tổng đơn hàng</h3>
             <div class="summary-items">
               <div class="summary-row" *ngFor="let item of dataService.cartItems()">
-                <span>{{ item.course.title }}</span>
-                <span>{{ item.course.price | number }}đ</span>
+                <span class="truncate-text" style="max-width: 200px">{{ item.course?.title }}</span>
+                <span>{{ item.course?.price | number }}đ</span>
               </div>
             </div>
 
@@ -64,29 +67,24 @@ import { DataService } from '../../core/services/data.service';
             </div>
 
             <div class="summary-total">
-              <div class="total-row">
-                <span>Tổng cộng</span>
-                <span class="total-value">608.000đ</span>
-              </div>
-              <div class="total-row discount">
-                <span>Giảm giá (10%)</span>
-                <span>- 60.800đ</span>
-              </div>
               <div class="total-row final">
                 <span><strong>Thanh toán:</strong></span>
-                <span class="final-value">547.200đ</span>
+                <span class="final-value">{{ dataService.cartTotal() | number }}đ</span>
               </div>
             </div>
 
-            <a routerLink="/checkout" class="btn btn-primary btn-lg" style="width:100%">🔒 Thanh toán ngay →</a>
+            <button class="btn btn-primary btn-lg" style="width:100%" (click)="checkout()" [disabled]="checkoutLoading">
+               <ng-container *ngIf="!checkoutLoading">🔒 Thanh toán ngay →</ng-container>
+               <ng-container *ngIf="checkoutLoading">⏳ Đang xử lý...</ng-container>
+            </button>
             <p class="security-note">🔒 Bảo mật SSL • Hoàn tiền 30 ngày</p>
             <div class="payment-methods">
               <span>Chấp nhận thanh toán:</span>
               <div class="methods">
-                <span class="method">💳 Thẻ</span>
+                <span class="method"><i class="fa-solid fa-credit-card"></i> Thẻ</span>
                 <span class="method">📱 MoMo</span>
                 <span class="method">🏦 VNPay</span>
-                <span class="method">💰 Zalo</span>
+                <span class="method"><i class="fa-solid fa-coins"></i> Zalo</span>
               </div>
             </div>
           </div>
@@ -95,10 +93,10 @@ import { DataService } from '../../core/services/data.service';
     </div>
   `,
   styles: [`
-    .cart-page { padding: 24px 0 60px; }
+    .cart-page { padding: 24px 0 60px; min-height: calc(100vh - 72px); }
     .cart-page h1 { font-size: 22px; margin-bottom: 4px; }
     .cart-count { font-size: 14px; color: var(--gray-500); margin-bottom: 20px; }
-    .cart-body { display: flex; gap: 24px; }
+    .cart-body { display: flex; gap: 24px; align-items: flex-start; }
     .cart-main { flex: 1; }
     .cart-item {
       display: flex;
@@ -107,18 +105,17 @@ import { DataService } from '../../core/services/data.service';
       margin-bottom: 12px;
     }
     .item-thumb {
-      width: 80px; height: 80px;
+      width: 100px; height: 80px;
       background: var(--primary-bg);
       border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
-      font-size: 32px; flex-shrink: 0;
+      flex-shrink: 0;
     }
-    .item-info { flex: 1; }
-    .item-info h3 { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .item-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .item-info h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; line-height: 1.4; }
     .item-info p { font-size: 13px; color: var(--gray-500); }
-    .item-meta { font-size: 12px; color: var(--gray-400); }
     .item-actions {
-      display: flex; gap: 16px; margin-top: 8px;
+      display: flex; gap: 16px; margin-top: 12px;
     }
     .action-link {
       background: none;
@@ -127,8 +124,8 @@ import { DataService } from '../../core/services/data.service';
       cursor: pointer;
       padding: 0;
     }
-    .action-link.danger { color: var(--danger); }
-    .item-price { text-align: right; }
+    .action-link.danger { color: var(--danger); font-weight: 500; }
+    .item-price { text-align: right; min-width: 100px; }
     .price-current {
       display: block;
       font-size: 18px;
@@ -140,26 +137,23 @@ import { DataService } from '../../core/services/data.service';
       color: var(--gray-400);
       font-size: 13px;
     }
-    .ai-suggest {
-      padding: 16px;
-      background: var(--primary-bg);
-      border-color: var(--primary-light);
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .ai-suggest p { flex: 1; font-size: 13px; color: var(--gray-600); }
 
-    .cart-sidebar { width: 380px; flex-shrink: 0; }
+    .cart-sidebar { width: 380px; flex-shrink: 0; position: sticky; top: 24px; }
     .summary-card { padding: 24px; }
     .summary-card h3 { font-size: 18px; margin-bottom: 16px; }
     .summary-items { border-bottom: 1px solid var(--gray-200); padding-bottom: 12px; margin-bottom: 16px;}
     .summary-row {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 13px;
       padding: 4px 0;
       color: var(--gray-600);
+    }
+    .truncate-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .coupon-row { margin-bottom: 16px; }
     .coupon-row h4 { font-size: 14px; margin-bottom: 8px; }
@@ -178,7 +172,7 @@ import { DataService } from '../../core/services/data.service';
     }
     .total-value { font-weight: 700; color: var(--primary); font-size: 18px; }
     .discount span { color: var(--success); }
-    .final { margin-top: 8px; }
+    .final { margin-top: 8px; align-items: center; }
     .final-value { font-size: 22px; font-weight: 800; color: var(--primary); }
     .security-note {
       text-align: center;
@@ -187,15 +181,94 @@ import { DataService } from '../../core/services/data.service';
       margin: 12px 0;
     }
     .payment-methods { font-size: 12px; color: var(--gray-500); }
-    .methods { display: flex; gap: 8px; margin-top: 6px; }
+    .methods { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
     .method {
       padding: 6px 12px;
       border: 1px solid var(--gray-200);
       border-radius: var(--radius-sm);
       font-size: 12px;
     }
+    .mt-4 { margin-top: 16px; display: inline-block; }
   `]
 })
-export class CartComponent {
-  constructor(public dataService: DataService) { }
+export class CartComponent implements OnInit {
+  public dataService = inject(DataService);
+  private apiService = inject(ApiService);
+  private router = inject(Router);
+
+  checkoutLoading = false;
+
+  ngOnInit() {
+    this.dataService.loadCart();
+  }
+
+  removeItem(courseId?: number) {
+    if (!courseId) return;
+
+    Swal.fire({
+      title: 'Bạn có chắc chắn?',
+      text: 'Xóa khóa học này khỏi giỏ hàng?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#e53e3e',
+      cancelButtonColor: '#a0aec0',
+      confirmButtonText: 'Xóa ngay',
+      cancelButtonText: 'Hủy'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.dataService.removeFromCart(courseId).subscribe({
+          next: () => {
+            this.dataService.loadCart();
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'info',
+              title: 'Đã xóa khóa học',
+              showConfirmButton: false,
+              timer: 3000,
+              timerProgressBar: true
+            });
+          },
+          error: (err) => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Lỗi',
+              text: err.error?.message || 'Có lỗi xảy ra.',
+              confirmButtonColor: '#5a67d8'
+            });
+          }
+        });
+      }
+    });
+  }
+
+  checkout() {
+    if (this.dataService.cartItems().length === 0) return;
+
+    this.checkoutLoading = true;
+    this.apiService.checkout().subscribe({
+      next: (res) => {
+        this.checkoutLoading = false;
+        Swal.fire({
+          icon: 'success',
+          title: 'Thanh toán thành công!',
+          text: 'Bạn có thể bắt đầu học ngay.',
+          confirmButtonColor: '#5a67d8'
+        }).then(() => {
+          this.dataService.loadCart();
+          this.dataService.loadMyCourses();
+          this.router.navigate(['/my-courses']);
+        });
+      },
+      error: (err) => {
+        this.checkoutLoading = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Thanh toán thất bại',
+          text: err.error?.message || 'Đã xảy ra lỗi trong quá trình thanh toán.',
+          confirmButtonColor: '#5a67d8'
+        });
+      }
+    });
+  }
 }

@@ -1,41 +1,43 @@
-import { Component, Input } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
-    <header class="header" [class.authenticated]="isAuthenticated">
+    <header class="header" [class.authenticated]="authService.isLoggedIn()">
       <div class="header-inner">
         <a routerLink="/" class="logo">
           <span class="logo-icon">E</span>
           <span class="logo-text">EduLearn</span>
         </a>
         <nav class="nav">
-          <a routerLink="/home" routerLinkActive="active">Trang chủ</a>
+          <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Trang chủ</a>
           <a routerLink="/course" routerLinkActive="active">Khóa học</a>
           <a routerLink="/ai-recommendations" routerLinkActive="active">AI Gợi ý</a>
-          <a *ngIf="isAuthenticated" routerLink="/dashboard" routerLinkActive="active">Học tập</a>
+          <a *ngIf="authService.isLoggedIn()" routerLink="/dashboard" routerLinkActive="active">Học tập của tôi</a>
         </nav>
         <div class="header-right">
-          <ng-container *ngIf="!isAuthenticated">
+          <ng-container *ngIf="!authService.isLoggedIn()">
             <a routerLink="/login" class="btn btn-outline btn-sm">Tham gia</a>
           </ng-container>
-          <ng-container *ngIf="isAuthenticated">
-            <button class="icon-btn" routerLink="/cart">
-              🔔
-              <span class="badge-count">2</span>
-            </button>
-            <button class="icon-btn">🛒</button>
-            <div class="user-menu" routerLink="/my-courses">
-              <div class="avatar-sm">HV</div>
+          <ng-container *ngIf="authService.isLoggedIn()">
+            <div class="user-menu-pill" [routerLink]="getProfileLink()">
+              <div class="avatar-wrapper">
+                <img *ngIf="authService.currentUser()?.avatar" [src]="authService.currentUser()?.avatar" class="user-avatar" alt="Avatar">
+                <div *ngIf="!authService.currentUser()?.avatar" class="avatar-gradient">{{ getInitials() }}</div>
+              </div>
               <div class="user-info">
-                <span class="user-name">Học viên</span>
-                <span class="user-link">Học tập của tôi →</span>
+                <span class="user-name">{{ authService.userName() || 'Học viên' }}</span>
+                <span class="user-link">{{ getProfileText() }} <i class="fa-solid fa-chevron-right" style="font-size: 10px; margin-left: 4px;"></i></span>
               </div>
             </div>
+            <button class="icon-action-btn logout-btn" (click)="logout()" title="Đăng xuất" aria-label="Đăng xuất">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
           </ng-container>
         </div>
       </div>
@@ -95,11 +97,13 @@ import { CommonModule } from '@angular/common';
       color: var(--white);
       border-bottom-color: var(--white);
     }
+    
+    /* Modern Header Right Styles */
     .header-right {
       margin-left: auto;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }
     .header-right .btn-outline {
       color: var(--white);
@@ -109,68 +113,133 @@ import { CommonModule } from '@angular/common';
       background: var(--white);
       color: var(--primary);
     }
-    .icon-btn {
-      position: relative;
-      background: transparent;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      padding: 4px;
-    }
-    .badge-count {
-      position: absolute;
-      top: -4px;
-      right: -6px;
-      background: var(--danger);
-      color: var(--white);
-      font-size: 10px;
-      width: 16px;
-      height: 16px;
+    
+    .icon-action-btn {
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--white);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      position: relative;
     }
-    .user-menu {
+    .icon-action-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .icon-action-btn.logout-btn:hover {
+      background: rgba(220, 53, 69, 0.9);
+      border-color: rgba(220, 53, 69, 0.5);
+      color: #fff;
+    }
+
+    .user-menu-pill {
       display: flex;
       align-items: center;
       gap: 10px;
+      padding: 4px 16px 4px 4px;
+      border-radius: 50px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       cursor: pointer;
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      transition: var(--transition);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      outline: none;
     }
-    .user-menu:hover {
-      background: rgba(255,255,255,0.1);
+    .user-menu-pill:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
-    .avatar-sm {
+    
+    .avatar-wrapper {
+      width: 34px;
+      height: 34px;
+      position: relative;
+    }
+    .user-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid rgba(255, 255, 255, 0.8);
+    }
+    .avatar-gradient {
       width: 34px;
       height: 34px;
       border-radius: 50%;
-      background: var(--white);
+      background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);
       color: var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      font-size: 12px;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4);
     }
+    
     .user-info {
       display: flex;
       flex-direction: column;
+      justify-content: center;
+      padding-top: 1px;
     }
     .user-name {
       color: var(--white);
       font-weight: 600;
       font-size: 13px;
+      line-height: 1.2;
     }
     .user-link {
-      color: rgba(255,255,255,0.7);
+      color: rgba(255, 255, 255, 0.7);
       font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .user-menu-pill:hover .user-link {
+      color: rgba(255, 255, 255, 0.95);
+    }
+    .user-link i {
+      transition: transform 0.2s ease;
+    }
+    .user-menu-pill:hover .user-link i {
+      transform: translateX(3px);
     }
   `]
 })
 export class HeaderComponent {
-  @Input() isAuthenticated = false;
+  authService = inject(AuthService);
+
+  getInitials() {
+    const name = this.authService.userName() || 'HV';
+    return name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  getProfileLink() {
+    const role = this.authService.userRole();
+    if (role === 'Admin') return '/admin/dashboard';
+    if (role === 'GiaoVien') return '/instructor/dashboard';
+    return '/student/settings';
+  }
+
+  getProfileText() {
+    const role = this.authService.userRole();
+    if (role === 'Admin') return 'Trang quản trị';
+    if (role === 'GiaoVien') return 'Trang giảng viên';
+    return 'Cài đặt cá nhân';
+  }
+
+  logout() {
+    this.authService.logout();
+  }
 }
+

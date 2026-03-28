@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../../shared/components/header/header.component';
 import { CourseCardComponent } from '../../shared/components/course-card/course-card.component';
 import { DataService } from '../../core/services/data.service';
@@ -8,7 +9,7 @@ import { DataService } from '../../core/services/data.service';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeaderComponent, CourseCardComponent],
+  imports: [CommonModule, RouterLink, FormsModule, HeaderComponent, CourseCardComponent],
   template: `
     <app-header />
 
@@ -26,7 +27,7 @@ import { DataService } from '../../core/services/data.service';
           nhất dựa trên hành vi học tập và sở thích của bạn.
         </p>
         <div class="hero-actions">
-          <a routerLink="/course" class="btn btn-outline hero-btn-outline">📚 Khám phá khóa học</a>
+          <a routerLink="/course" class="btn btn-outline hero-btn-outline"><i class="fa-solid fa-book"></i> Khám phá khóa học</a>
           <a routerLink="/ai-recommendations" class="btn btn-primary hero-btn-ai">🤖 Nhận gợi ý AI →</a>
         </div>
         <div class="stats-row">
@@ -44,14 +45,28 @@ import { DataService } from '../../core/services/data.service';
     <!-- Search Section -->
     <section class="search-section">
       <div class="container">
-        <div class="search-bar">
-          <span class="search-icon">🔍</span>
-          <input type="text" placeholder="Tìm kiếm khóa học, kỹ năng, giảng viên..." class="search-input">
-          <div class="search-cat">
-            <span>Tất cả danh mục</span>
-            <span>▾</span>
+        <div class="search-bar-modern">
+          <div class="search-input-group">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" 
+                   [(ngModel)]="searchQuery" 
+                   (keyup.enter)="searchCourses()"
+                   placeholder="Tìm kiếm khóa học, kỹ năng, giảng viên..." 
+                   class="search-input">
           </div>
-          <button class="btn btn-primary search-btn">🔍 Tìm kiếm</button>
+          
+          <div class="search-divider"></div>
+          
+          <div class="search-select-group">
+            <select class="search-select" [(ngModel)]="selectedCategory" (ngModelChange)="selectCategory($event)">
+              <option *ngFor="let cat of dataService.categories()" [value]="cat">{{ cat }}</option>
+            </select>
+            <i class="fa-solid fa-chevron-down select-chevron"></i>
+          </div>
+          
+          <button class="btn btn-primary search-btn-modern" (click)="searchCourses()">
+            <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
+          </button>
         </div>
       </div>
     </section>
@@ -60,8 +75,10 @@ import { DataService } from '../../core/services/data.service';
     <section class="categories-section">
       <div class="container">
         <div class="category-tags">
-          <button *ngFor="let cat of dataService.categories(); let i = index"
-                  class="cat-tag" [class.active]="i === 0">
+          <button *ngFor="let cat of dataService.categories()"
+                  class="cat-tag" 
+                  [class.active]="cat === selectedCategory"
+                  (click)="selectCategory(cat)">
             {{ cat }}
           </button>
         </div>
@@ -161,52 +178,106 @@ import { DataService } from '../../core/services/data.service';
     }
 
     .search-section {
-      margin-top: -2px;
-      padding: 24px 0 16px;
-      background: var(--white);
-      box-shadow: var(--shadow-sm);
+      margin-top: -36px;
+      position: relative;
+      z-index: 10;
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
     }
-    .search-bar {
+    .search-bar-modern {
       display: flex;
       align-items: center;
-      gap: 0;
-      border: 2px solid var(--gray-200);
-      border-radius: var(--radius-md);
-      overflow: hidden;
       background: var(--white);
+      border-radius: 100px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
+      padding: 8px 8px 8px 24px;
+      border: 1px solid rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+    }
+    .search-bar-modern:focus-within {
+      box-shadow: 0 15px 45px rgba(91, 99, 211, 0.15);
+      border-color: rgba(91, 99, 211, 0.3);
+    }
+    .search-input-group {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
     .search-icon {
-      padding: 0 16px;
+      color: var(--gray-400);
       font-size: 18px;
     }
     .search-input {
-      flex: 1;
+      width: 100%;
       border: none;
-      padding: 14px 0;
-      font-size: 14px;
+      padding: 12px 0;
+      font-size: 15px;
       background: transparent;
-    }
-    .search-input:focus {
+      color: var(--gray-800);
       outline: none;
     }
-    .search-cat {
+    .search-input::placeholder {
+      color: var(--gray-400);
+    }
+    .search-divider {
+      width: 1px;
+      height: 28px;
+      background: var(--gray-200);
+      margin: 0 12px;
+    }
+    .search-select-group {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border-left: 1px solid var(--gray-200);
-      color: var(--gray-500);
-      font-size: 14px;
-      white-space: nowrap;
-      cursor: pointer;
+      margin-right: 12px;
     }
-    .search-btn {
-      border-radius: 0;
-      padding: 14px 24px;
+    .search-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      border: none;
+      padding: 12px 32px 12px 12px;
+      font-size: 14px;
+      color: var(--gray-600);
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+      min-width: 160px;
+    }
+    .search-select:hover {
+      color: var(--primary);
+    }
+    .select-chevron {
+      position: absolute;
+      right: 8px;
+      pointer-events: none;
+      font-size: 12px;
+      color: var(--gray-400);
+      transition: transform 0.2s;
+    }
+    .search-select:hover + .select-chevron {
+      color: var(--primary);
+    }
+    .search-btn-modern {
+      border-radius: 50px;
+      padding: 14px 32px;
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(91, 99, 211, 0.3);
+      transition: all 0.3s ease;
+    }
+    .search-btn-modern:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(91, 99, 211, 0.4);
     }
 
     .categories-section {
-      padding: 20px 0;
+      padding: 40px 0 20px;
     }
     .category-tags {
       display: flex;
@@ -256,5 +327,46 @@ import { DataService } from '../../core/services/data.service';
   `]
 })
 export class HomeComponent {
+  selectedCategory = 'Tất cả';
+  searchQuery = '';
+
+  private router = inject(Router);
+
   constructor(public dataService: DataService) {}
+
+  searchCourses() {
+    let categoryId: number | undefined = undefined;
+    if (this.selectedCategory !== 'Tất cả') {
+      const rawCat = this.dataService.categoriesRaw().find(c => c.ten === this.selectedCategory);
+      categoryId = rawCat?.maTheLoai;
+    }
+    
+    // Navigate to courses list page with search params
+    this.router.navigate(['/course'], { 
+      queryParams: { 
+        q: this.searchQuery.trim() || null, 
+        cat: categoryId || null 
+      } 
+    });
+  }
+
+  selectCategory(cat: string) {
+    this.selectedCategory = cat;
+    // In-place refresh for homepage category tags
+    this.fetchCourses();
+  }
+
+  private fetchCourses() {
+    let categoryId: number | undefined = undefined;
+
+    if (this.selectedCategory !== 'Tất cả') {
+      const rawCat = this.dataService.categoriesRaw().find(c => c.ten === this.selectedCategory);
+      categoryId = rawCat?.maTheLoai;
+    }
+
+    this.dataService.loadCourses({ 
+      categoryId: categoryId,
+      search: this.searchQuery.trim() || undefined
+    });
+  }
 }

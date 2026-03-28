@@ -20,7 +20,7 @@ import { CommonModule } from '@angular/common';
         <div *ngFor="let ch of chapters" class="chapter">
           <div class="chapter-header">
             <span>{{ ch.title }}</span>
-            <span class="ch-toggle">📋</span>
+            <span class="ch-toggle"><i class="fa-solid fa-clipboard-list"></i></span>
           </div>
           <div *ngFor="let lesson of ch.lessons" class="lesson-item" [class.completed]="lesson.completed" [class.current]="lesson.current">
             <span class="lesson-icon">
@@ -46,7 +46,7 @@ import { CommonModule } from '@angular/common';
         <!-- Video Player -->
         <div class="video-player">
           <div class="video-placeholder">
-            <button class="play-btn">▶</button>
+            <button class="play-btn"><i class="fa-solid fa-play"></i></button>
           </div>
           <div class="video-info">
             <span>Ch.2 • Functions in Python • 20 phút</span>
@@ -54,7 +54,7 @@ import { CommonModule } from '@angular/common';
           <div class="video-controls">
             <div class="controls-left">
               <button>⏮</button>
-              <button>▶</button>
+              <button><i class="fa-solid fa-play"></i></button>
               <button>⏭</button>
             </div>
             <span>0:00 / 20:32</span>

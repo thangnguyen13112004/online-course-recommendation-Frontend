@@ -8,7 +8,7 @@ import { HeaderComponent } from '../../shared/components/header/header.component
   standalone: true,
   imports: [CommonModule, RouterLink, HeaderComponent],
   template: `
-    <app-header [isAuthenticated]="true" />
+    <app-header />
     <div class="container checkout-page">
       <a routerLink="/cart" class="back-link">← Quay lại giỏ hàng</a>
 
@@ -68,7 +68,7 @@ import { HeaderComponent } from '../../shared/components/header/header.component
           <div class="order-card card">
             <h3>Đơn hàng của bạn</h3>
             <div class="order-item" *ngFor="let item of orderItems">
-              <span class="oi-icon">📦</span>
+              <span class="oi-icon"><i class="fa-solid fa-box"></i></span>
               <div class="oi-info">
                 <strong>{{ item.name }}</strong>
                 <span>{{ item.instructor }}</span>

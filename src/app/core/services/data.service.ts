@@ -1,50 +1,267 @@
-import { Injectable, signal } from '@angular/core';
-import { Course, User, Promotion, EnrolledCourse, Certificate, CartItem } from '../models/models';
+import { Injectable, signal, inject } from '@angular/core';
+import { Course, User, Promotion, EnrolledCourse, Certificate, CartItem, Category, CartResponse } from '../models/models';
+import { ApiService } from './api.service';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
-  readonly courses = signal<Course[]>([
-    { id: 1, title: 'Python từ cơ bản đến nâng cao', slug: 'python-co-ban', instructor: 'Nguyễn Văn An', rating: 4.8, reviewCount: '1.2k', price: 299000, originalPrice: 599000, image: '🐍', category: 'Lập trình', level: 'Tất cả cấp độ', aiMatch: 98, hours: 42, modules: 8, students: 12450, year: 2024, description: 'Khóa học toàn diện giúp bạn nắm vững Python từ cơ bản đến nâng cao với các dự án thực tế', source: 'Coursera' },
-    { id: 2, title: 'React & TypeScript hiện đại', slug: 'react-typescript', instructor: 'Trần Thị Bích', rating: 4.8, reviewCount: '1.2k', price: 349000, originalPrice: 699000, image: '⚛️', category: 'Frontend', level: 'Trung cấp', aiMatch: 95, hours: 38, modules: 10, students: 8900, year: 2024, description: 'Xây dựng ứng dụng hiện đại với React và TypeScript', source: 'Udemy', aiReason: 'Người học tương tự bạn cũng đăng ký khóa này' },
-    { id: 3, title: 'Machine Learning với TensorFlow', slug: 'ml-tensorflow', instructor: 'Lê Minh Tú', rating: 4.8, reviewCount: '1.2k', price: 499000, originalPrice: 999000, image: '🤖', category: 'AI/ML', level: 'Nâng cao', aiMatch: 91, hours: 56, modules: 12, students: 6700, year: 2024, description: 'Học Machine Learning từ A-Z với TensorFlow', source: 'edX', aiReason: 'Tiếp nối lộ trình học AI/ML của bạn' },
-    { id: 4, title: 'UI/UX chuyên nghiệp với Figma', slug: 'uiux-figma', instructor: 'Phạm Thanh Hà', rating: 4.8, reviewCount: '1.2k', price: 259000, originalPrice: 519000, image: '🎨', category: 'Design', level: 'Cơ bản', aiMatch: 88, hours: 28, modules: 6, students: 5400, year: 2024, description: 'Thiết kế UI/UX chuyên nghiệp với Figma', source: 'LinkedIn' },
-    { id: 5, title: 'Node.js & REST API', slug: 'nodejs-api', instructor: 'Hoàng Đức Minh', rating: 4.8, reviewCount: '1.2k', price: 329000, originalPrice: 659000, image: '🟢', category: 'Lập trình', level: 'Trung cấp', hours: 35, modules: 8, students: 7200, year: 2024, source: 'Coursera' },
-    { id: 6, title: 'SQL & Database', slug: 'sql-database', instructor: 'Vũ Thị Lan', rating: 4.8, reviewCount: '1.2k', price: 199000, originalPrice: 399000, image: '🗄️', category: 'Database', level: 'Cơ bản', hours: 24, modules: 6, students: 9800, year: 2024, source: 'Udemy' },
-    { id: 7, title: 'Flutter & Dart', slug: 'flutter-dart', instructor: 'Nguyễn Bảo Long', rating: 4.8, reviewCount: '1.2k', price: 399000, originalPrice: 799000, image: '🐦', category: 'Mobile', level: 'Trung cấp', hours: 40, modules: 10, students: 4300, year: 2024, source: 'Coursera' },
-    { id: 8, title: 'Docker & K8s', slug: 'docker-k8s', instructor: 'Đặng Văn Khải', rating: 4.8, reviewCount: '1.2k', price: 449000, originalPrice: 899000, image: '🐋', category: 'DevOps', level: 'Nâng cao', hours: 45, modules: 12, students: 3200, year: 2024, source: 'edX' },
-  ]);
+  private api = inject(ApiService);
+  private auth = inject(AuthService);
 
-  readonly users = signal<User[]>([
-    { id: 1, name: 'Nguyễn Ngọc Thắng', email: 'thang@email.com', role: 'student', initials: 'NT', color: '#5B63D3', joinDate: '15/01/2025', status: 'active', coursesCount: 3, rating: 5 },
-    { id: 2, name: 'Đoàn Duy Hiếu', email: 'hieu@email.com', role: 'instructor', initials: 'DH', color: '#FD7E14', joinDate: '20/02/2025', status: 'active', coursesCount: 2, rating: 5 },
-    { id: 3, name: 'Huỳnh Mộng Tuyền', email: 'tuyen@email.com', role: 'student', initials: 'HT', color: '#28A745', joinDate: '01/03/2025', status: 'inactive', coursesCount: 0, rating: 5 },
-    { id: 4, name: 'Trần Văn Bình', email: 'binh@email.com', role: 'student', initials: 'TV', color: '#17A2B8', joinDate: '10/03/2025', status: 'active', coursesCount: 5, rating: 5 },
-    { id: 5, name: 'Lê Thị Anh', email: 'anh@email.com', role: 'student', initials: 'LA', color: '#6F42C1', joinDate: '12/03/2025', status: 'active', coursesCount: 1, rating: 5 },
-    { id: 6, name: 'Phạm Minh', email: 'minh@email.com', role: 'instructor', initials: 'PM', color: '#DC3545', joinDate: '13/03/2025', status: 'active', coursesCount: 3, rating: 5 },
-  ]);
+  // Signals cho UI binding
+  readonly courses = signal<Course[]>([]);
+  readonly users = signal<User[]>([]);
+  readonly promotions = signal<Promotion[]>([]);
+  readonly enrolledCourses = signal<EnrolledCourse[]>([]);
+  readonly certificates = signal<Certificate[]>([]);
+  readonly cartItems = signal<CartItem[]>([]);
+  readonly cartTotal = signal<number>(0);
+  readonly categories = signal<string[]>(['Tất cả']);
+  readonly categoriesRaw = signal<Category[]>([]);
+  readonly adminStats = signal({
+    totalUsers: 0,
+    students: 0,
+    instructors: 0,
+    admins: 0,
+    totalCourses: 0,
+    totalCategories: 0
+  });
 
-  readonly promotions = signal<Promotion[]>([
-    { id: 1, code: 'GIAM50', type: 'percent', value: 50, condition: 'Đơn ≥ 300k', usedCount: 124, expiryDate: '31/03/2026', status: 'active' },
-    { id: 2, code: 'NEWUSER', type: 'percent', value: 20, condition: 'Lần đầu mua', usedCount: 892, expiryDate: '30/06/2026', status: 'active' },
-    { id: 3, code: 'SUMMER25', type: 'percent', value: 25, condition: 'Tất cả đơn', usedCount: 56, expiryDate: '15/03/2026', status: 'expired' },
-    { id: 4, code: 'FLASH100', type: 'fixed', value: 100000, condition: 'Đơn ≥ 500k', usedCount: 23, expiryDate: '20/03/2026', status: 'active' },
-    { id: 5, code: 'VIP30', type: 'percent', value: 30, condition: 'Thành viên VIP', usedCount: 210, expiryDate: '01/12/2026', status: 'active' },
-  ]);
+  // Loading states
+  readonly loadingCourses = signal(false);
+  readonly loadingCart = signal(false);
 
-  readonly enrolledCourses = signal<EnrolledCourse[]>([
-    { course: this.courses()[0], progress: 65, modules: 8 },
-    { course: this.courses()[2], progress: 30, modules: 12 },
-  ]);
+  constructor() {
+    this.loadCategories();
+    this.loadCourses();
+  }
 
-  readonly certificates = signal<Certificate[]>([
-    { id: 1, courseName: 'Python for Beginners', source: 'Coursera', date: '15/01/2025' },
-    { id: 2, courseName: 'React Development', source: 'Udemy', date: '20/02/2025' },
-  ]);
+  // ========================
+  // COURSES
+  // ========================
+  loadCourses(params?: { search?: string; categoryId?: number; sortBy?: string; page?: number }) {
+    this.loadingCourses.set(true);
+    this.api.getCourses({
+      page: params?.page ?? 1,
+      pageSize: 12,
+      search: params?.search,
+      categoryId: params?.categoryId,
+      sortBy: params?.sortBy
+    }).subscribe({
+      next: (res) => {
+        const mapped = (res.data || []).map((k: any) => this.mapCourseFromApi(k));
+        this.courses.set(mapped);
+        this.loadingCourses.set(false);
+      },
+      error: () => this.loadingCourses.set(false)
+    });
+  }
 
-  readonly cartItems = signal<CartItem[]>([
-    { course: this.courses()[1], quantity: 1 },
-    { course: this.courses()[3], quantity: 1 },
-  ]);
+  // ========================
+  // CATEGORIES
+  // ========================
+  loadCategories() {
+    this.api.getCategories().subscribe({
+      next: (cats: Category[]) => {
+        this.categoriesRaw.set(cats);
+        const names = ['Tất cả', ...cats.map(c => c.ten)];
+        this.categories.set(names);
+      }
+    });
+  }
 
-  readonly categories = signal<string[]>(['Tất cả', 'Lập trình', 'Frontend', 'AI/ML', 'Design', 'Database', 'Mobile', 'DevOps']);
+  // ========================
+  // CART
+  // ========================
+  loadCart() {
+    if (!this.auth.isLoggedIn()) return;
+    this.loadingCart.set(true);
+    this.api.getCart().subscribe({
+      next: (res: CartResponse) => {
+        const mappedItems = (res.items || []).map((i: any) => ({
+          ...i,
+          course: {
+            id: i.khoaHoc?.maKhoaHoc,
+            title: i.khoaHoc?.tieuDe,
+            price: i.gia ?? i.khoaHoc?.giaGoc ?? 0,
+            originalPrice: i.khoaHoc?.giaGoc,
+            instructor: i.khoaHoc?.giangVien || 'Chưa có',
+            image: i.khoaHoc?.anhUrl || '',
+            level: 'Tất cả cấp độ',
+            hours: 0
+          }
+        }));
+        this.cartItems.set(mappedItems);
+        this.cartTotal.set(res.tongTien || 0);
+        this.loadingCart.set(false);
+      },
+      error: () => this.loadingCart.set(false)
+    });
+  }
+
+  addToCart(courseId: number) {
+    return this.api.addToCart(courseId);
+  }
+
+  removeFromCart(courseId: number) {
+    return this.api.removeFromCart(courseId);
+  }
+
+  // ========================
+  // LEARNING
+  // ========================
+  loadMyCourses() {
+    if (!this.auth.isLoggedIn()) return;
+    this.api.getMyCourses().subscribe({
+      next: (data: any[]) => {
+        const mapped = (data || []).map((t: any) => ({
+          ...t,
+          course: {
+            id: t.khoaHoc?.maKhoaHoc,
+            title: t.khoaHoc?.tieuDe,
+            image: t.khoaHoc?.anhUrl || '',
+            rating: t.khoaHoc?.tbdanhGia ?? 0,
+            category: t.khoaHoc?.theLoai || 'Chưa phân loại',
+            instructor: t.khoaHoc?.giangVien || 'Chưa có',
+            modules: t.khoaHoc?.soLuongChuong ?? 0
+          },
+          progress: t.phanTramTienDo ?? 0
+        }));
+        this.enrolledCourses.set(mapped);
+      }
+    });
+  }
+
+  loadCertificates() {
+    if (!this.auth.isLoggedIn()) return;
+    this.api.getCertificates().subscribe({
+      next: (data: any[]) => {
+        const mapped = (data || []).map((c: any) => ({
+          ...c,
+          id: c.maChungChi,
+          courseName: c.khoaHoc?.tieuDe,
+          date: c.ngayPhat ? new Date(c.ngayPhat).toLocaleDateString('vi-VN') : '',
+          source: 'EduLearn'
+        }));
+        this.certificates.set(mapped);
+      }
+    });
+  }
+
+  // ========================
+  // USERS (Admin)
+  // ========================
+  loadUsers(page = 1, search?: string) {
+    this.api.getUsers(page, 10, search).subscribe({
+      next: (res) => {
+        const mapped = (res.data || []).map((u: any) => this.mapUserFromApi(u));
+        this.users.set(mapped);
+        
+        // Cập nhật thống kê sơ bộ (từ trang đầu tiên trả về totalCount)
+        if (page === 1) {
+          this.adminStats.update(s => ({ ...s, totalUsers: res.totalCount }));
+        }
+      }
+    });
+  }
+
+  loadAdminStats() {
+    // Gọi các endpoint nhẹ nhàng để lấy con số tổng quát
+    this.api.getUsers(1, 1).subscribe(res => {
+      this.adminStats.update(s => ({ ...s, totalUsers: res.totalCount }));
+    });
+
+    // Lấy danh sách để đếm vai trò (tạm thời lấy page 1, 100 users đầu tiên)
+    this.api.getUsers(1, 100).subscribe(res => {
+      const data = res.data || [];
+      const students = data.filter((u: any) => u.vaiTro === 'HocVien').length;
+      const instructors = data.filter((u: any) => u.vaiTro === 'GiaoVien').length;
+      const admins = data.filter((u: any) => u.vaiTro === 'Admin').length;
+      this.adminStats.update(s => ({ ...s, students, instructors, admins }));
+    });
+
+    this.api.getCourses({ page: 1, pageSize: 1 }).subscribe(res => {
+      this.adminStats.update(s => ({ ...s, totalCourses: res.totalCount }));
+    });
+
+    this.api.getCategories().subscribe(res => {
+      const d = Array.isArray(res) ? res : (res.data || []);
+      this.adminStats.update(s => ({ ...s, totalCategories: d.length }));
+    });
+  }
+
+  // ========================
+  // HELPERS — Map API response to UI-friendly format
+  // ========================
+  private mapCourseFromApi(k: any): Course {
+    const mainInstructor = (k.giangVien || []).find((g: any) => g.laGiangVienChinh)?.ten
+      || (k.giangVien || [])[0]?.ten || 'Chưa có';
+
+    return {
+      ...k,
+      id: k.maKhoaHoc,
+      title: k.tieuDe,
+      slug: this.toSlug(k.tieuDe),
+      instructor: mainInstructor,
+      rating: k.tbdanhGia ?? 0,
+      reviewCount: this.formatCount(k.soLuongDanhGia ?? 0),
+      price: k.khuyenMai?.phanTramGiam
+        ? Math.round((k.giaGoc ?? 0) * (1 - k.khuyenMai.phanTramGiam / 100))
+        : k.giaGoc ?? 0,
+      originalPrice: k.giaGoc ?? 0,
+      image: k.anhUrl || '',
+      category: k.theLoai?.ten || 'Chưa phân loại',
+      level: 'Tất cả cấp độ',
+      modules: k.soLuongChuong ?? 0,
+      students: k.soHocVien ?? 0,
+      description: k.moTa
+    };
+  }
+
+  private mapUserFromApi(u: any): User {
+    return {
+      ...u,
+      id: u.maNguoiDung,
+      name: u.ten,
+      email: u.email,
+      role: this.mapRole(u.vaiTro),
+      initials: this.getInitials(u.ten || 'U'),
+      color: this.getColorForUser(u.maNguoiDung),
+      joinDate: u.ngayTao ? new Date(u.ngayTao).toLocaleDateString('vi-VN') : 'Mới',
+      status: u.tinhTrang === 'Bị khóa' ? 'inactive' : 'active',
+      coursesCount: u.vaiTro === 'GiaoVien' ? 5 : 0, // Mock số lượng khóa học cho giảng viên
+      rating: 5
+    };
+  }
+
+  private mapRole(vaiTro: string): string {
+    const map: Record<string, string> = {
+      'HocVien': 'student',
+      'GiaoVien': 'instructor',
+      'Admin': 'admin'
+    };
+    return map[vaiTro] || 'student';
+  }
+
+  private toSlug(str: string): string {
+    return str.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  private formatCount(n: number): string {
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+    return n.toString();
+  }
+
+  private getInitials(name: string): string {
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  private getColorForUser(id: number): string {
+    const colors = ['#5B63D3', '#FD7E14', '#28A745', '#17A2B8', '#6F42C1', '#DC3545'];
+    return colors[id % colors.length];
+  }
 }

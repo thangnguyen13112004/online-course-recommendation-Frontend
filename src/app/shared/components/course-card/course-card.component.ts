@@ -1,15 +1,20 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { Course } from '../../../core/models/models';
+import { AuthService } from '../../../core/services/auth.service';
+import { DataService } from '../../../core/services/data.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-course-card',
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="course-card card">
+    <div class="course-card card" (click)="goToDetail()">
       <div class="card-image" [class.dark-variant]="darkMode">
-        <span class="card-emoji">{{ course.image }}</span>
+        <img *ngIf="course.image && course.image.length > 5" [src]="course.image" (error)="course.image = ''" alt="course" style="width: 100%; height: 100%; object-fit: cover;">
+        <div *ngIf="!course.image || course.image.length <= 5" class="card-emoji" style="display:flex; justify-content:center; align-items:center; width:100%; height:100%"><i class="fa-solid fa-box" style="font-size: 32px"></i></div>
         <span *ngIf="course.aiMatch" class="ai-badge badge-primary">
           🤖 AI {{ course.aiMatch }}%
         </span>
@@ -23,9 +28,9 @@ import { Course } from '../../../core/models/models';
         </div>
         <div class="card-price">
           <span class="price">{{ course.price | number }}đ</span>
-          <span class="original-price">{{ course.originalPrice | number }}đ</span>
+          <span class="original-price" *ngIf="course.price !== undefined && course.originalPrice !== undefined && course.originalPrice > course.price">{{ course.originalPrice | number }}đ</span>
         </div>
-        <button *ngIf="showCartBtn" class="btn btn-primary btn-sm cart-btn" (click)="$event.stopPropagation()">+ Giỏ hàng</button>
+        <button *ngIf="showCartBtn" class="btn btn-primary btn-sm cart-btn" (click)="addToCart($event)">+ Giỏ hàng</button>
       </div>
     </div>
   `,
@@ -116,4 +121,59 @@ export class CourseCardComponent {
   @Input() showRating = true;
   @Input() showCartBtn = false;
   @Input() darkMode = false;
+
+  private router = inject(Router);
+  private authService = inject(AuthService);
+  private dataService = inject(DataService);
+
+  goToDetail() {
+    if (this.course?.id) {
+      this.router.navigate(['/course', this.course.id]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  addToCart(event: Event) {
+    event.stopPropagation();
+    
+    if (!this.course?.id) return;
+
+    if (!this.authService.isLoggedIn()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Yêu cầu đăng nhập',
+        text: 'Vui lòng đăng nhập để thêm vào giỏ hàng.',
+        confirmButtonColor: '#5a67d8',
+        confirmButtonText: 'Đến trang đăng nhập'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.router.navigate(['/login']);
+        }
+      });
+      return;
+    }
+
+    this.dataService.addToCart(this.course.id).subscribe({
+      next: () => {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Đã thêm vào giỏ hàng!',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true
+        });
+        this.dataService.loadCart();
+      },
+      error: (err) => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Lỗi',
+          text: err.error?.message || 'Có lỗi xảy ra.',
+          confirmButtonColor: '#5a67d8'
+        });
+      }
+    });
+  }
 }

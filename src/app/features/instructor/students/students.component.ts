@@ -1,145 +1,256 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstructorLayoutComponent } from '../../../layouts/instructor-layout/instructor-layout.component';
-import { DataService } from '../../../core/services/data.service';
+import { ApiService } from '../../../core/services/api.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-instructor-students',
   standalone: true,
-  imports: [CommonModule, InstructorLayoutComponent],
+  imports: [CommonModule, InstructorLayoutComponent, FormsModule],
   template: `
     <app-instructor-layout>
-      <h1>📚 Học viên của tôi</h1>
-      <div class="filter-row">
-        <span>Lọc theo khóa học:</span>
-        <div class="filter-select">📚 Lập trình Python từ cơ bản 📋</div>
+      <h1><i class="fa-solid fa-users"></i> Học viên của tôi</h1>
+      <p class="subtitle" style="margin-bottom: 24px;">Quản lý tiến độ học tập và thông tin học viên thuộc các khóa học của bạn.</p>
+
+      <!-- Search & Filters -->
+      <div class="filters card">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" placeholder="Tìm kiếm theo Tên, Email..." [(ngModel)]="searchTerm" (input)="filterStudents()">
+        </div>
+        <select class="form-select" [(ngModel)]="courseFilter" (change)="filterStudents()">
+          <option value="ALL">Tất cả khóa học</option>
+          <option *ngFor="let course of uniqueCourses" [value]="course">{{ course }}</option>
+        </select>
+        <button class="btn btn-outline" (click)="loadStudents()"><i class="fa-solid fa-rotate-right"></i> Làm mới</button>
       </div>
 
-      <!-- Stats -->
-      <div class="stats-row">
-        <div class="stat-card card"><span class="sv primary">450</span><span class="sl">Tổng học viên</span></div>
-        <div class="stat-card card"><span class="sv success">75%</span><span class="sl">Hoàn thành TB</span></div>
-        <div class="stat-card card"><span class="sv orange">4.8</span><span class="sl">Đánh giá TB</span></div>
-      </div>
-
-      <!-- Search -->
-      <div class="search-row">
-        <input type="text" class="form-input" placeholder="📝 Tìm học viên..." style="flex:1">
-        <div class="filter-select">Tất cả trạng thái 📋</div>
+      <!-- Loading State -->
+      <div *ngIf="isLoading" style="padding: 40px; text-align: center; color: var(--gray-400);">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 28px; margin-bottom: 8px; display: block;"></i>
+        Đang tải danh sách học viên...
       </div>
 
       <!-- Table -->
-      <div class="table-wrapper card">
+      <div class="table-wrapper card" *ngIf="!isLoading">
         <table>
           <thead>
             <tr>
               <th>Học viên</th>
-              <th>Email</th>
-              <th>Ngày đăng ký</th>
+              <th>Khóa học</th>
+              <th>Ngày tham gia</th>
               <th>Tiến độ</th>
               <th>Trạng thái</th>
               <th>Hành động</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let student of students">
+            <tr *ngFor="let item of filteredStudents">
               <td>
                 <div class="student-cell">
-                  <div class="avatar" [style.background]="student.color">{{ student.initials }}</div>
+                  <!-- Avatar -->
+                  <div class="avatar" 
+                       [style.background-image]="item.hocVien?.linkAnhDaiDien ? 'url(' + item.hocVien.linkAnhDaiDien + ')' : ''"
+                       [ngStyle]="{'background-color': !item.hocVien?.linkAnhDaiDien ? getAvatarColor(item.hocVien?.ten) : ''}"
+                       [class.no-avt]="!item.hocVien?.linkAnhDaiDien">
+                    {{ !item.hocVien?.linkAnhDaiDien ? getInitials(item.hocVien?.ten) : '' }}
+                  </div>
+                  <!-- Name & Email -->
                   <div>
-                    <strong>{{ student.name }}</strong>
-                    <div class="stars-sm">★★★★★</div>
+                    <strong>{{ item.hocVien?.ten || 'Người dùng ẩn' }}</strong>
+                    <div style="font-size: 11px; color: var(--gray-500); margin-top: 2px;">{{ item.hocVien?.email }}</div>
                   </div>
                 </div>
               </td>
-              <td>{{ student.email }}</td>
-              <td>{{ student.date }}</td>
+              <td style="font-size: 13px; color: var(--gray-700); max-width: 250px;" class="truncate" [title]="item.khoaHoc?.tieuDe">
+                {{ item.khoaHoc?.tieuDe }}
+              </td>
+              <td>{{ item.ngayThamGia | date:'dd/MM/yyyy' }}</td>
               <td>
                 <div class="progress-cell">
-                  <div class="progress-bar"><div class="fill" [style.width.%]="student.progress" [class.complete]="student.progress === 100"></div></div>
-                  <span>{{ student.progress }}%</span>
+                  <div class="progress-bar">
+                    <div class="fill" [style.width.%]="item.phanTramTienDo" [class.complete]="item.phanTramTienDo === 100"></div>
+                  </div>
+                  <span [class.text-success]="item.phanTramTienDo === 100">{{ item.phanTramTienDo }}%</span>
                 </div>
               </td>
-              <td><span class="badge badge-primary">Đang học</span></td>
               <td>
-                <button class="btn btn-outline btn-sm">📋 Xem</button>
-                <button class="icon-action">📊</button>
+                <span class="badge" [ngClass]="item.phanTramTienDo === 100 ? 'badge-success' : 'badge-primary'">
+                  {{ item.phanTramTienDo === 100 ? 'Đã hoàn thành' : 'Đang học' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-outline btn-sm action-btn" title="Gửi tin nhắn"><i class="fa-regular fa-envelope"></i> Nhắn tin</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredStudents.length === 0">
+              <td colspan="6" style="text-align: center; padding: 40px; color: var(--gray-400);">
+                <i class="fa-solid fa-users-slash" style="font-size: 32px; margin-bottom: 10px; display: block;"></i>
+                Không có học viên nào phù hợp với tìm kiếm của bạn.
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+      
+      <!-- Basic Pagination placeholders -->
+      <div class="pagination-footer" *ngIf="!isLoading && totalCount > 0">
+        <span class="text-sm">Hiển thị {{ filteredStudents.length }} trên tổng số {{ totalCount }} lượt đăng ký</span>
+        <div class="page-controls">
+          <button class="btn btn-outline btn-sm" [disabled]="page === 1" (click)="changePage(page - 1)">« Trước</button>
+          <button class="btn btn-outline btn-sm default">Trang {{ page }}</button>
+          <button class="btn btn-outline btn-sm" [disabled]="filteredStudents.length < pageSize" (click)="changePage(page + 1)">Sau »</button>
+        </div>
+      </div>
     </app-instructor-layout>
   `,
   styles: [`
-    h1 { font-size: 22px; margin-bottom: 12px; }
-    .filter-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-      font-size: 14px;
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: var(--gray-500); }
+    
+    .filters {
+      display: flex; gap: 16px; padding: 16px; margin-bottom: 24px; align-items: center;
     }
-    .filter-select {
-      padding: 8px 14px;
-      border: 1px solid var(--gray-300);
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      background: var(--white);
-      cursor: pointer;
+    
+    .search-box {
+      position: relative; flex: 1; max-width: 400px;
     }
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
+    .search-box i {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray-400); font-size: 14px;
     }
-    .stat-card { padding: 20px; }
-    .sv { font-size: 28px; font-weight: 800; display: block; }
-    .sv.primary { color: var(--primary); }
-    .sv.success { color: var(--success); }
-    .sv.orange { color: var(--orange); }
-    .sl { font-size: 13px; color: var(--gray-500); }
-    .search-row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
+    .search-box input {
+      width: 100%; padding: 10px 14px 10px 36px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm);
+      font-size: 14px; outline: none; transition: all 0.2s ease;
     }
-    .student-cell {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .search-box input:focus {
+      border-color: #FF7B54; box-shadow: 0 0 0 3px rgba(255,123,84,0.1);
     }
+    
+    .form-select {
+      padding: 10px 32px 10px 14px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm);
+      font-size: 14px; background: var(--white); outline: none; cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center; background-size: 14px;
+      min-width: 250px;
+    }
+    
+    .table-wrapper { overflow-x: auto; margin-bottom: 16px; }
+    
+    .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .student-cell { display: flex; align-items: center; gap: 12px; }
     .avatar {
-      width: 36px; height: 36px; border-radius: 50%;
+      width: 38px; height: 38px; border-radius: 10px; background-size: cover; background-position: center;
+    }
+    .avatar.no-avt {
       display: flex; align-items: center; justify-content: center;
-      color: var(--white); font-weight: 700; font-size: 12px;
+      color: var(--white); font-weight: 700; font-size: 13px;
     }
-    .stars-sm { color: var(--orange); font-size: 11px; }
-    .progress-cell {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-width: 150px;
-    }
-    .progress-cell .progress-bar { flex: 1; }
-    .progress-cell span { font-size: 13px; font-weight: 600; }
+    
+    .progress-cell { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+    .progress-cell .progress-bar { flex: 1; height: 6px; background: var(--gray-100); border-radius: 10px; overflow: hidden;}
+    .fill { height: 100%; background: linear-gradient(90deg, #FFB26B, #FF7B54); border-radius: 10px; transition: width 0.3s ease; }
     .fill.complete { background: var(--success); }
-    .icon-action {
-      background: none;
-      font-size: 16px;
-      padding: 4px 8px;
-      cursor: pointer;
-    }
+    .progress-cell span { font-size: 12px; font-weight: 700; color: var(--gray-600); }
+    .text-success { color: var(--success) !important; }
+    
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-primary { background: rgba(59,130,246,0.15); color: #3B82F6; }
+    .badge-success { background: rgba(40,167,69,0.15); color: #28A745; }
+    
+    .action-btn { font-size: 12px; padding: 6px 10px; border-radius: 6px;}
+    
+    .pagination-footer { display: flex; justify-content: space-between; align-items: center; }
+    .text-sm { font-size: 13px; color: var(--gray-500); }
+    .page-controls { display: flex; gap: 6px; }
+    .page-controls button:disabled { opacity: 0.5; cursor: not-allowed; }
   `]
 })
-export class InstructorStudentsComponent {
-  students = [
-    { name: 'Nguyễn Ngọc Thắng', email: 'thang@email.com', date: '15/01/2025', progress: 75, initials: 'NT', color: '#5B63D3' },
-    { name: 'Đoàn Duy Hiếu', email: 'hieu@email.com', date: '20/02/2025', progress: 100, initials: 'DH', color: '#FD7E14' },
-    { name: 'Huỳnh Mộng Tuyền', email: 'tuyen@email.com', date: '01/03/2025', progress: 30, initials: 'HT', color: '#28A745' },
-    { name: 'Trần Văn Bình', email: 'binh@email.com', date: '10/03/2025', progress: 15, initials: 'TV', color: '#17A2B8' },
-    { name: 'Lê Thị Anh', email: 'anh@email.com', date: '12/03/2025', progress: 60, initials: 'LA', color: '#6F42C1' },
-    { name: 'Phạm Minh', email: 'minh@email.com', date: '14/03/2025', progress: 45, initials: 'PM', color: '#DC3545' },
-  ];
+export class InstructorStudentsComponent implements OnInit {
+  private api = inject(ApiService);
+  
+  isLoading = true;
+  allStudents: any[] = [];
+  filteredStudents: any[] = [];
+  
+  // Pagination
+  page = 1;
+  pageSize = 50;
+  totalCount = 0;
+  
+  // Filters
+  searchTerm = '';
+  courseFilter = 'ALL';
+  uniqueCourses: string[] = [];
+
+  // Consistent color mapping for avatars
+  private colorMap = ['#FF7B54', '#5B63D3', '#28A745', '#E83E8C', '#17A2B8', '#6F42C1', '#FD7E14'];
+
+  ngOnInit() {
+    this.loadStudents();
+  }
+
+  loadStudents() {
+    this.isLoading = true;
+    this.api.getInstructorStudents(this.page, this.pageSize).subscribe({
+      next: (res) => {
+        this.allStudents = res.data || [];
+        this.totalCount = res.totalCount || 0;
+        
+        // Extract unique course titles for the filter dropdown
+        const courses = this.allStudents
+                            .map(item => item.khoaHoc?.tieuDe)
+                            .filter(t => t); // remove nulls
+        this.uniqueCourses = [...new Set(courses)] as string[];
+        
+        this.filterStudents();
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Lỗi khi tải danh sách học viên', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  filterStudents() {
+    let results = this.allStudents;
+
+    if (this.courseFilter !== 'ALL') {
+      results = results.filter(item => item.khoaHoc?.tieuDe === this.courseFilter);
+    }
+
+    if (this.searchTerm.trim()) {
+      const term = this.searchTerm.toLowerCase().trim();
+      results = results.filter(item => 
+        item.hocVien?.ten?.toLowerCase().includes(term) || 
+        item.hocVien?.email?.toLowerCase().includes(term)
+      );
+    }
+
+    this.filteredStudents = results;
+  }
+  
+  changePage(newPage: number) {
+    if (newPage < 1) return;
+    this.page = newPage;
+    this.loadStudents();
+  }
+
+  getInitials(name?: string): string {
+    if (!name) return 'HV';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+  
+  getAvatarColor(name?: string): string {
+    if (!name) return this.colorMap[0];
+    let sum = 0;
+    for(let i=0; i < name.length; i++){
+      sum += name.charCodeAt(i);
+    }
+    return this.colorMap[sum % this.colorMap.length];
+  }
 }

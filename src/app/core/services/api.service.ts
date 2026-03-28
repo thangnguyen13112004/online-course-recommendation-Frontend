@@ -1,0 +1,233 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+
+@Injectable({ providedIn: 'root' })
+export class ApiService {
+  private readonly apiUrl = environment.apiUrl;
+
+  constructor(private http: HttpClient) { }
+
+  // ========================
+  // COURSES
+  // ========================
+  getCourses(params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    categoryId?: number;
+    sortBy?: string;
+  }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params?.page) httpParams = httpParams.set('page', params.page);
+    if (params?.pageSize) httpParams = httpParams.set('pageSize', params.pageSize);
+    if (params?.search) httpParams = httpParams.set('search', params.search);
+    if (params?.categoryId) httpParams = httpParams.set('categoryId', params.categoryId);
+    if (params?.sortBy) httpParams = httpParams.set('sortBy', params.sortBy);
+    return this.http.get(`${this.apiUrl}/courses`, { params: httpParams });
+  }
+
+  getCourseById(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/courses/${id}`);
+  }
+
+  getCourseChapters(courseId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/courses/${courseId}/chapters`);
+  }
+
+  updateCourse(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/courses/${id}`, data);
+  }
+
+  createCourse(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/courses`, data);
+  }
+
+  deleteCourse(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/courses/${id}`);
+  }
+
+  getCourseReviews(courseId: number, page = 1, pageSize = 10): Observable<any> {
+    return this.http.get(`${this.apiUrl}/courses/${courseId}/reviews`, {
+      params: { page, pageSize }
+    });
+  }
+
+  // Admin: lấy tất cả khóa học (mọi trạng thái)
+  getAdminCourses(params?: { page?: number; pageSize?: number; search?: string; status?: string }): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params?.page) httpParams = httpParams.set('page', params.page);
+    if (params?.pageSize) httpParams = httpParams.set('pageSize', params.pageSize);
+    if (params?.search) httpParams = httpParams.set('search', params.search);
+    if (params?.status) httpParams = httpParams.set('status', params.status);
+    return this.http.get(`${this.apiUrl}/courses/admin/all`, { params: httpParams });
+  }
+
+  // Admin: cập nhật trạng thái khóa học (Published / Rejected / Draft / Pending)
+  updateCourseStatus(courseId: number, tinhTrang: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/courses/${courseId}/status`, { tinhTrang });
+  }
+
+  // ========================
+  // CATEGORIES
+  // ========================
+  getCategories(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/categories`);
+  }
+
+  getCategoryById(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/categories/${id}`);
+  }
+
+  createCategory(data: { ten: string; moTa?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/categories`, data);
+  }
+
+  updateCategory(id: number, data: { ten: string; moTa?: string }): Observable<any> {
+    return this.http.put(`${this.apiUrl}/categories/${id}`, data);
+  }
+
+  deleteCategory(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/categories/${id}`);
+  }
+
+  // ========================
+  // CART
+  // ========================
+  getCart(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/cart`);
+  }
+
+  addToCart(courseId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/cart/${courseId}`, {});
+  }
+
+  removeFromCart(courseId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/cart/${courseId}`);
+  }
+
+  // ========================
+  // ORDERS
+  // ========================
+  checkout(phuongThucThanhToan?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/orders/checkout`, { phuongThucThanhToan });
+  }
+
+  getOrders(page = 1, pageSize = 10): Observable<any> {
+    return this.http.get(`${this.apiUrl}/orders`, { params: { page, pageSize } });
+  }
+
+  // ========================
+  // LEARNING
+  // ========================
+  getMyCourses(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/learning/my-courses`);
+  }
+
+  getCourseContent(courseId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/learning/course/${courseId}`);
+  }
+
+  completeLesson(lessonId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/learning/lesson/${lessonId}/complete`, {});
+  }
+
+  getCertificates(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/learning/certificates`);
+  }
+
+  // ========================
+  // USERS (Admin)
+  // ========================
+  getUsers(page = 1, pageSize = 10, search?: string): Observable<any> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (search) params = params.set('search', search);
+    return this.http.get(`${this.apiUrl}/users`, { params });
+  }
+
+  getUserProfile(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/users/profile`);
+  }
+
+  updateUserProfile(data: { ten?: string; tieuSu?: string; linkAnhDaiDien?: string }): Observable<any> {
+    return this.http.put(`${this.apiUrl}/users/profile`, data);
+  }
+
+  deactivateAccount(): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/users/profile`);
+  }
+
+  updateUserRole(userId: number, vaiTro: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/users/${userId}/role`, { vaiTro });
+  }
+
+  updateUserStatus(userId: number, tinhTrang: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/users/${userId}/status`, { tinhTrang });
+  }
+
+  // ========================
+  // PROMOTIONS (Admin)
+  // ========================
+  getPromotions(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/promotions`);
+  }
+
+  createPromotion(data: { tenChuongTrinh: string; phanTramGiam?: number; ngayBatDau?: string; ngayKetThuc?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/promotions`, data);
+  }
+
+  updatePromotion(id: number, data: { tenChuongTrinh?: string; phanTramGiam?: number; ngayBatDau?: string; ngayKetThuc?: string }): Observable<any> {
+    return this.http.put(`${this.apiUrl}/promotions/${id}`, data);
+  }
+
+  deletePromotion(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/promotions/${id}`);
+  }
+
+  // ========================
+  // INSTRUCTOR
+  // ========================
+  getInstructorCourses(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/instructor/courses`);
+  }
+
+  getInstructorStudents(page = 1, pageSize = 20): Observable<any> {
+    return this.http.get(`${this.apiUrl}/instructor/students`, { params: { page, pageSize } });
+  }
+
+  getInstructorStats(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/instructor/stats`);
+  }
+
+  // ========================
+  // INTERACTIONS
+  // ========================
+  rateCourse(maKhoaHoc: number, rating: number, binhLuan?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/interactions/rate`, { maKhoaHoc, rating, binhLuan });
+  }
+
+  toggleLike(courseId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/interactions/like/${courseId}`, {});
+  }
+
+  getLikedCourses(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/interactions/likes`);
+  }
+
+  // ========================
+  // RECOMMENDATIONS (Neo4j)
+  // ========================
+  getUserBasedRecommendations(userId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/recommendation/user-based/${userId}`);
+  }
+
+  getSimilarCourses(courseId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/recommendation/content-based/similar-courses/${courseId}`);
+  }
+
+  getUserProfileRecommendations(userId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/recommendation/content-based/user-profile/${userId}`);
+  }
+}
+
