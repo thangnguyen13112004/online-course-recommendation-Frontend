@@ -37,11 +37,11 @@ export class ApiService {
   }
 
   updateCourse(id: number, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/courses/${id}`, data);
+    return this.http.put(`${this.apiUrl}/instructor/courses/${id}`, data);
   }
 
   createCourse(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/courses`, data);
+    return this.http.post(`${this.apiUrl}/instructor/courses`, data);
   }
 
   deleteCourse(id: number): Observable<any> {
@@ -198,6 +198,32 @@ export class ApiService {
 
   getInstructorStats(): Observable<any> {
     return this.http.get(`${this.apiUrl}/instructor/stats`);
+  }
+
+  getRevenueSeries(year?: number): Observable<any> {
+    let httpParams = new HttpParams();
+    if (year) httpParams = httpParams.set('year', year);
+    return this.http.get(`${this.apiUrl}/instructor/stats/revenue-series`, { params: httpParams });
+  }
+
+  createChapter(courseId: number, data: { tieuDe: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/instructor/courses/${courseId}/chapters`, data);
+  }
+
+  createLesson(chapterId: number, data: { lyThuyet?: string, baiTap?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/instructor/chapters/${chapterId}/lessons`, data);
+  }
+
+  uploadCourseCover(courseId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.apiUrl}/instructor/courses/${courseId}/cover`, formData);
+  }
+
+  uploadLessonVideo(lessonId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.apiUrl}/instructor/lessons/${lessonId}/video`, formData);
   }
 
   // ========================

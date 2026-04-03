@@ -170,15 +170,7 @@ export class InstructorRevenueComponent implements OnInit {
   revenueThisMonth = 'đ0';
   expectedRevenue = 'đ0';
 
-  annualRevenue = [
-    { month: 'Tháng 1', value: '0', height: 0 },
-    { month: 'Tháng 2', value: '0', height: 0 },
-    { month: 'Tháng 3', value: '0', height: 0 },
-    { month: 'Tháng 4', value: '0', height: 0 },
-    { month: 'Tháng 5', value: '0', height: 0 },
-    { month: 'Tháng 6', value: '0', height: 0 },
-  ];
-
+  annualRevenue: any[] = [];
   payouts: any[] = [];
 
   ngOnInit() {
@@ -187,30 +179,45 @@ export class InstructorRevenueComponent implements OnInit {
       next: (res) => {
         if (res && res.tongDoanhThu !== undefined) {
           this.totalRevenue = res.tongDoanhThu;
-
-          if (this.totalRevenue > 0) {
-            // Apply mock data proportionally
-            this.revenueThisMonth = this.formatCurrencyM(this.totalRevenue * 0.32);
-            this.expectedRevenue = this.formatCurrencyM(this.totalRevenue * 0.35);
-
-            this.annualRevenue = [
-              { month: 'Tháng 1', value: this.formatCurrencyM(this.totalRevenue * 0.1), height: 30 },
-              { month: 'Tháng 2', value: this.formatCurrencyM(this.totalRevenue * 0.25), height: 60 },
-              { month: 'Tháng 3', value: this.formatCurrencyM(this.totalRevenue * 0.32), height: 80 },
-              { month: 'Tháng 4', value: '0', height: 0 },
-              { month: 'Tháng 5', value: '0', height: 0 },
-              { month: 'Tháng 6', value: '0', height: 0 },
-            ];
-
-            const p1 = this.totalRevenue * 0.25;
-            const p2 = this.totalRevenue * 0.1;
-
-            this.payouts = [
-              { period: 'Tháng 2/2026', gross: this.formatCurrencyFull(p1), fee: this.formatCurrencyFull(p1 * 0.3), net: this.formatCurrencyFull(p1 * 0.7), status: 'Đã hoàn tất' },
-              { period: 'Tháng 1/2026', gross: this.formatCurrencyFull(p2), fee: this.formatCurrencyFull(p2 * 0.3), net: this.formatCurrencyFull(p2 * 0.7), status: 'Đã hoàn tất' }
-            ];
-          }
         }
+      }
+    });
+
+    this.api.getRevenueSeries().subscribe({
+      next: (res) => {
+        const maxRev = Math.max(...res.map((r: any) => r.revenue)) || 1;
+        this.annualRevenue = res.map((r: any) => ({
+          month: r.month,
+          value: r.revenue > 0 ? this.formatCurrencyM(r.revenue) : '0',
+          height: r.revenue > 0 ? Math.max((r.revenue / maxRev) * 100, 5) : 0
+        }));
+
+        // Calculate this month and next month expected
+        const currentMonthNum = new Date().getMonth() + 1;
+        const currentMonthData = res.find((r: any) => r.month === `T${currentMonthNum}`);
+        const currentMonthRev = currentMonthData ? currentMonthData.revenue : 0;
+        
+        this.revenueThisMonth = this.formatCurrencyM(currentMonthRev);
+        this.expectedRevenue = this.formatCurrencyM(currentMonthRev * 1.15); // mock 15% increase expected
+
+        // Generate payouts from past months with revenue
+        this.payouts = [];
+        const currentYear = new Date().getFullYear();
+        res.forEach((r: any) => {
+          const m = parseInt(r.month.replace('T', ''), 10);
+          if (m < currentMonthNum && r.revenue > 0) {
+            this.payouts.push({
+              period: `Tháng ${m}/${currentYear}`,
+              gross: this.formatCurrencyFull(r.revenue),
+              fee: this.formatCurrencyFull(r.revenue * 0.3),
+              net: this.formatCurrencyFull(r.revenue * 0.7),
+              status: 'Đã hoàn tất'
+            });
+          }
+        });
+        
+        // Sort payouts descending
+        this.payouts.sort((a, b) => b.period.localeCompare(a.period));
       }
     });
   }

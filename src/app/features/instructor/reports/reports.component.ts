@@ -86,15 +86,15 @@ import { ApiService } from '../../../core/services/api.service';
       <div class="charts-row">
         <div class="chart-container card main-chart">
           <div class="chart-header">
-            <h3><i class="fa-solid fa-arrow-trend-up"></i> Tăng trưởng học viên</h3>
+            <h3><i class="fa-solid fa-arrow-trend-up"></i> Tăng trưởng doanh thu</h3>
             <div class="chart-legend">
-              <span class="dot Blue"></span> Học viên mới
+              <span class="dot Blue"></span> Doanh thu (VNĐ)
             </div>
           </div>
           <div class="chart-content growth-chart">
             <div *ngFor="let item of growthData" class="growth-bar-wrapper">
-              <div class="growth-bar" [style.height.%]="item.value"></div>
-              <span class="month-label">{{ item.month }}</span>
+              <div class="growth-bar" [style.height.%]="getBarHeight(item.value)"></div>
+              <span class="month-label" style="font-size: 10px;">{{ item.month }}</span>
             </div>
           </div>
         </div>
@@ -106,13 +106,13 @@ import { ApiService } from '../../../core/services/api.service';
           <div class="pie-placeholder">
              <div class="pie-ring">
                <div class="pie-center">
-                 <strong>70%</strong>
-                 <span>Lợi nhuận</span>
+                 <strong>{{ publishedCount }}</strong>
+                 <span>Xuất bản</span>
                </div>
              </div>
              <div class="pie-labels">
-                <div class="p-item"><span class="dot success"></span> Giảng viên (70%)</div>
-                <div class="p-item"><span class="dot gray"></span> Nền tảng (30%)</div>
+                <div class="p-item"><span class="dot success"></span> Xuất bản ({{ publishedCount }})</div>
+                <div class="p-item"><span class="dot gray"></span> Bản nháp/Chờ duyệt ({{ draftCount }})</div>
              </div>
           </div>
         </div>
@@ -262,21 +262,15 @@ export class InstructorReportsComponent implements OnInit {
   courses: any[] = [];
   isLoading = true;
   today = new Date();
+  publishedCount = 0;
+  draftCount = 0;
 
   // Dropdown State
   isDropdownOpen = false;
   selectedRange = '30 ngày qua';
   dateRanges = ['7 ngày qua', '30 ngày qua', '90 ngày qua', 'Năm nay', 'Toàn thời gian'];
 
-  growthData = [
-    { month: 'T1', value: 30 },
-    { month: 'T2', value: 45 },
-    { month: 'T3', value: 40 },
-    { month: 'T4', value: 65 },
-    { month: 'T5', value: 85 },
-    { month: 'T6', value: 75 },
-    { month: 'T7', value: 95 },
-  ];
+  growthData: any[] = [];
 
   ngOnInit() {
     this.loadData();
@@ -293,8 +287,45 @@ export class InstructorReportsComponent implements OnInit {
     // Fetch Courses
     this.api.getInstructorCourses().subscribe(res => {
       this.courses = res || [];
+      this.publishedCount = this.courses.filter(c => c.tinhTrang === 'Published').length;
+      this.draftCount = this.courses.length - this.publishedCount;
+      // Dùng timer nhỏ để vẽ
+      this.drawPieChart();
+    });
+
+    // Fetch Revenue Series
+    this.api.getRevenueSeries(this.today.getFullYear()).subscribe(res => {
+      const data = res || [];
+      this.growthData = data.map((d: any) => ({
+        month: d.month || d.Month,
+        value: d.revenue || d.Revenue
+      }));
       this.isLoading = false;
     });
+  }
+
+  getBarHeight(value: number): number {
+    if (!this.growthData || this.growthData.length === 0) return 0;
+    const max = Math.max(...this.growthData.map(d => d.value));
+    if (max === 0) return 0;
+    // Tối thiểu hiển thị 5% để thấy được thanh bar nếu có giá trị
+    return Math.max(5, (value / max) * 100);
+  }
+
+  drawPieChart() {
+    setTimeout(() => {
+      const total = this.courses.length;
+      if (total === 0) return;
+      const deg = (this.publishedCount / total) * 360;
+      const ring = document.querySelector('.pie-ring') as HTMLElement;
+      if (ring) {
+         // Create partial circle effect manually by applying conic gradient
+         ring.style.border = 'none';
+         ring.style.background = `conic-gradient(#10B981 0deg ${deg}deg, var(--gray-200) ${deg}deg 360deg)`;
+         // To make it a ring, add a white circle inside via CSS or DOM
+         ring.style.borderRadius = '50%';
+      }
+    }, 100);
   }
 
   toggleDropdown() {
@@ -305,16 +336,9 @@ export class InstructorReportsComponent implements OnInit {
     this.selectedRange = range;
     this.isDropdownOpen = false;
 
-    // Simulate data refresh on range change
+    // Simulate data refresh on range change (can be implemented later)
     this.isLoading = true;
-    setTimeout(() => {
-      // Randomize growth data for demo
-      this.growthData = this.growthData.map(d => ({
-        ...d,
-        value: Math.floor(Math.random() * 70) + 30
-      }));
-      this.isLoading = false;
-    }, 600);
+    this.loadData();
   }
 
   exportPDF() {

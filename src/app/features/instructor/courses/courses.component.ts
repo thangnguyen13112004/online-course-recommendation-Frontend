@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
+import { environment } from '../../../../environments/environment';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
@@ -50,7 +51,7 @@ import { ApiService } from '../../../core/services/api.service';
       <!-- Course Grid -->
       <div class="course-grid" *ngIf="!isLoading">
         <div class="course-card card" *ngFor="let course of filteredCourses">
-          <div class="course-img" [style.background-image]="course.anhUrl ? 'url(' + course.anhUrl + ')' : ''" [class.no-img]="!course.anhUrl">
+          <div class="course-img" [style.background-image]="course.anhUrl ? 'url(' + getImageUrl(course.anhUrl) + ')' : ''" [class.no-img]="!course.anhUrl">
             <span class="status-badge" [ngClass]="getStatusClass(course.tinhTrang)">{{ getStatusLabel(course.tinhTrang) }}</span>
             <i class="fa-solid fa-image" *ngIf="!course.anhUrl" style="font-size: 24px; color: var(--gray-400);"></i>
           </div>
@@ -287,6 +288,13 @@ export class InstructorCoursesComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
+  }
+
+  getImageUrl(path: string): string {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const baseUrl = environment.apiUrl.replace(/\/api$/, '');
+    return `${baseUrl}${path}`;
   }
 
   loadCourses() {

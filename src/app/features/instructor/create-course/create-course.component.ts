@@ -68,28 +68,47 @@ import Swal from 'sweetalert2';
 
           <div class="form-card card">
             <h3>📁 Media</h3>
-            <div class="media-grid">
+            <div class="media-grid" style="grid-template-columns: 1fr;">
               <div class="upload-box">
                 <span class="upload-icon">🖼️</span>
                 <strong>Ảnh bìa</strong>
-                <span class="upload-meta">750 x 422px • JPG, PNG</span>
-                <button class="btn btn-primary btn-sm">↑ Tải lên</button>
-              </div>
-              <div class="upload-box">
-                <span class="upload-icon">🎬</span>
-                <strong>Video giới thiệu</strong>
-                <span class="upload-meta">MP4 • Tối đa 1GB</span>
-                <button class="btn btn-primary btn-sm">↑ Tải lên</button>
+                <span class="upload-meta">JPG, PNG</span>
+                <input type="file" #coverInput style="display:none" accept="image/*" (change)="onCoverChange($event)">
+                <button class="btn btn-primary btn-sm" (click)="coverInput.click()" [disabled]="!editId">↑ Tải lên</button>
+                <div *ngIf="!editId" style="font-size:11px;color:red;margin-top:4px">Lưu thông tin cơ bản trước khi tải ảnh bìa!</div>
+                <div *ngIf="coverFileName" style="font-size:12px;color:var(--success);margin-top:4px">Đã chọn: {{ coverFileName }}</div>
               </div>
             </div>
           </div>
 
           <div class="form-card card">
             <div class="section-header">
-              <h3><i class="fa-solid fa-book"></i> Nội dung khóa học</h3>
-              <button class="btn btn-outline btn-sm"><i class="fa-solid fa-pen-to-square"></i> Thêm chương</button>
+              <h3><i class="fa-solid fa-book"></i> Nội dung khóa học (Chương & Bài học)</h3>
+              <button class="btn btn-outline btn-sm" (click)="showCreateChapter()" [disabled]="!editId"><i class="fa-solid fa-plus"></i> Thêm chương</button>
             </div>
-            <p style="font-size:13px; color: var(--gray-400); margin-bottom: 12px;">Tính năng quản lý chương/bài học đang được cập nhật...</p>
+            <div *ngIf="!editId" style="font-size:13px; color: red;">Vui lòng lưu Thông tin cơ bản trước khi thêm chương bài!</div>
+            
+            <div class="chapter-list" *ngIf="editId" style="margin-top: 16px;">
+              <div class="chapter-item card" *ngFor="let ch of chapters" style="margin-bottom: 12px; padding: 16px; background: var(--gray-50); border: 1px solid var(--gray-200);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--gray-200); padding-bottom: 12px; margin-bottom: 12px;">
+                  <h4 style="margin: 0; font-size: 15px; font-weight: 700;">{{ ch.tieuDe || ch.TieuDe }}</h4>
+                  <button class="btn btn-sm btn-primary" (click)="showCreateLesson(ch.maChuong || ch.MaChuong)">+ Thêm bài học</button>
+                </div>
+                <div class="lesson-list">
+                  <div class="lesson-item" *ngFor="let lesson of ch.baiHocs || ch.BaiHocs" style="padding: 10px; background: var(--white); border: 1px solid var(--gray-200); border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 14px;">
+                      {{ lesson.lyThuyet ? (lesson.lyThuyet.length > 50 ? lesson.lyThuyet.substring(0, 50) + '...' : lesson.lyThuyet) : 'Bài học' }}
+                      <span *ngIf="lesson.linkVideo" style="color: var(--success); font-size: 11px; margin-left: 6px;" title="Đã có video">🎥 (Có Video)</span>
+                    </span>
+                    <div>
+                      <input type="file" #videoInput style="display:none" accept="video/mp4" (change)="onVideoChange($event, lesson.maBaiHoc || lesson.MaBaiHoc)">
+                      <button class="btn btn-outline btn-sm" title="Upload Video" (click)="videoInput.click()"><i class="fa-solid fa-upload"></i> Upload Video</button>
+                    </div>
+                  </div>
+                  <div *ngIf="!ch.baiHocs || ch.baiHocs.length === 0" style="font-size: 12px; color: var(--gray-400);">Chưa có bài học nào trong chương này.</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -112,13 +131,13 @@ import Swal from 'sweetalert2';
             <button class="btn btn-primary w-100" style="margin-top: 12px; height: 48px; font-size:16px;" (click)="saveCourse()" [disabled]="isSaving">
                <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isSaving"></i>
                <i class="fa-solid fa-save" *ngIf="!isSaving"></i>
-               {{ editId ? 'Cập nhật khóa học' : 'Tạo & Tiếp tục' }}
+               {{ editId ? 'Cập nhật khóa học' : 'Lưu thông tin cơ bản' }}
             </button>
 
-            <div class="split-info">
+            <!-- <div class="split-info">
               <h4>📊 Tỷ lệ doanh thu</h4>
               <span>Giảng viên: <strong class="success">70%</strong></span>
-            </div>
+            </div> -->
           </div>
 
           <div class="checklist card">
@@ -224,6 +243,9 @@ export class CreateCourseComponent implements OnInit {
   languages = ['Tiếng Việt', 'Tiếng Anh', 'Tiếng Nhật', 'Tiếng Hàn', 'Song ngữ (Việt - Anh)'];
   levels = ['Tất cả cấp độ', 'Cơ bản (Cho người mới)', 'Trung bình', 'Nâng cao', 'Chuyên gia'];
 
+  coverFileName = '';
+  chapters: any[] = [];
+
   ngOnInit() {
     this.editId = this.route.snapshot.paramMap.get('id');
     
@@ -250,10 +272,18 @@ export class CreateCourseComponent implements OnInit {
           this.title = course.tieuDe || course.TieuDe || '';
           this.description = course.moTa || course.MoTa || '';
           this.price = course.giaGoc || course.GiaGoc || 0;
-          this.selectedCategory = course.maTheLoai || course.MaTheLoai || '';
+          this.selectedCategory = course.maTheLoai || course.MaTheLoai || course.theLoai?.maTheLoai || course.TheLoai?.MaTheLoai || '';
           this.status = course.tinhTrang || course.TinhTrang || 'Draft';
         }
-        this.isInitialLoading = false;
+
+        // Tải danh sách chương
+        this.api.getCourseChapters(id).subscribe({
+          next: (chaps) => {
+            this.chapters = chaps.data || chaps || [];
+            this.isInitialLoading = false;
+          },
+          error: () => this.isInitialLoading = false
+        });
       },
       error: () => {
         this.isInitialLoading = false;
@@ -261,6 +291,89 @@ export class CreateCourseComponent implements OnInit {
         this.router.navigate(['/instructor/courses']);
       }
     });
+  }
+
+  onCoverChange(event: any) {
+    if (!this.editId) return;
+    const file = event.target.files[0];
+    if (file) {
+      this.coverFileName = file.name;
+      this.api.uploadCourseCover(Number(this.editId), file).subscribe({
+        next: () => Swal.fire('Thành công', 'Đã tải lên ảnh bìa', 'success'),
+        error: (err) => Swal.fire('Lỗi', 'Không thể tải lên ảnh: ' + (err.error?.message || ''), 'error')
+      });
+    }
+  }
+
+  showCreateChapter() {
+     Swal.fire({
+      title: 'Tạo chương mới',
+      input: 'text',
+      inputLabel: 'Tiêu đề chương',
+      inputPlaceholder: 'Nhập tiêu đề chương...',
+      showCancelButton: true,
+      confirmButtonText: 'Tạo',
+      cancelButtonText: 'Hủy',
+      preConfirm: (val) => {
+        if (!val) { Swal.showValidationMessage('Vui lòng nhập tiêu đề!'); }
+        return val;
+      }
+    }).then((result) => {
+      if (result.isConfirmed && this.editId) {
+        this.api.createChapter(Number(this.editId), { tieuDe: result.value }).subscribe({
+          next: () => {
+             Swal.fire('Thành công', 'Đã thêm chương mới', 'success');
+             this.api.getCourseChapters(Number(this.editId)).subscribe((res) => this.chapters = res.data || res || []);
+          },
+          error: () => Swal.fire('Lỗi', 'Không thể tạo chương', 'error')
+        });
+      }
+    });
+  }
+
+  showCreateLesson(chapterId: number) {
+     Swal.fire({
+      title: 'Thêm bài học mới',
+      input: 'textarea',
+      inputLabel: 'Tiêu đề / Lý thuyết bài học',
+      inputPlaceholder: 'Nhập nội dung bài học...',
+      showCancelButton: true,
+      confirmButtonText: 'Tạo',
+      cancelButtonText: 'Hủy',
+      preConfirm: (val) => {
+        if (!val) { Swal.showValidationMessage('Vui lòng nhập lý thuyết!'); }
+        return val;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.api.createLesson(chapterId, { lyThuyet: result.value }).subscribe({
+          next: () => {
+             Swal.fire('Thành công', 'Đã thêm bài học mới', 'success');
+             if(this.editId) this.api.getCourseChapters(Number(this.editId)).subscribe((res) => this.chapters = res.data || res || []);
+          },
+          error: () => Swal.fire('Lỗi', 'Không thể tạo bài học', 'error')
+        });
+      }
+    });
+  }
+
+  onVideoChange(event: any, lessonId: number) {
+    const file = event.target.files[0];
+    if (file) {
+      Swal.fire({
+         title: 'Đang tải lên...',
+         text: 'Vui lòng đợi (cửa sổ sẽ tự đóng khi xong)',
+         allowOutsideClick: false,
+         didOpen: () => { Swal.showLoading() }
+      });
+      this.api.uploadLessonVideo(lessonId, file).subscribe({
+        next: () => {
+           Swal.fire('Thành công', 'Đã tải upload video', 'success');
+           if(this.editId) this.api.getCourseChapters(Number(this.editId)).subscribe((res) => this.chapters = res.data || res || []);
+        },
+        error: (err) => Swal.fire('Lỗi', 'Tải video thất bại: ' + (err.error?.message || ''), 'error')
+      });
+    }
   }
 
   getStatusLabel(): string {
@@ -300,7 +413,14 @@ export class CreateCourseComponent implements OnInit {
       },
       error: (err) => {
         this.isSaving = false;
-        Swal.fire('Lỗi', err.error?.message || 'Có lỗi xảy ra khi lưu khóa học', 'error');
+        let errMsg = err.error?.message;
+        if (!errMsg && err.error?.errors) {
+            // Lấy tất cả các lỗi validation (nếu có)
+            errMsg = Object.values(err.error.errors).flat().join('\n');
+        }
+        if (!errMsg && err.message) errMsg = err.message;
+
+        Swal.fire('Lỗi', errMsg || 'Lỗi ' + err.status + ' - Có lỗi xảy ra khi lưu', 'error');
       }
     });
   }

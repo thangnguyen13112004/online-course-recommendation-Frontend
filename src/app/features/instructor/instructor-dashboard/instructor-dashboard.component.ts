@@ -196,15 +196,7 @@ export class InstructorDashboardComponent implements OnInit {
   draftCount = 0;
   instructorName = '';
 
-  // Mock chart data (since API doesn't provide time-series yet)
-  revenueData = [
-    { month: 'T1', value: '8M', height: 35 },
-    { month: 'T2', value: '12M', height: 50 },
-    { month: 'T3', value: '18M', height: 70 },
-    { month: 'T4', value: '15M', height: 60 },
-    { month: 'T5', value: '22M', height: 90 },
-    { month: 'T6', value: '19M', height: 78 },
-  ];
+  revenueData: any[] = [];
 
   ngOnInit() {
     // Get instructor name from Auth
@@ -221,6 +213,19 @@ export class InstructorDashboardComponent implements OnInit {
     this.api.getInstructorStats().subscribe({
       next: (res) => this.stats = res,
       error: (err) => console.error('Failed to load stats', err)
+    });
+
+    // Fetch Revenue Series
+    this.api.getRevenueSeries().subscribe({
+      next: (res) => {
+        const maxRev = Math.max(...res.map((r: any) => r.revenue)) || 1;
+        this.revenueData = res.map((r: any) => ({
+          month: r.month,
+          value: r.revenue > 0 ? this.formatCurrencyM(r.revenue) : '0',
+          height: r.revenue > 0 ? Math.max((r.revenue / maxRev) * 100, 5) : 0
+        }));
+      },
+      error: (err) => console.error('Failed to load revenue series', err)
     });
 
     // Fetch Courses

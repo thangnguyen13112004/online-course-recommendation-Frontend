@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../../shared/components/header/header.component';
 import { DataService } from '../../core/services/data.service';
 import { ApiService } from '../../core/services/api.service';
@@ -11,7 +12,7 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-course-detail',
   standalone: true,
-  imports: [CommonModule, HeaderComponent],
+  imports: [CommonModule, RouterModule, FormsModule, HeaderComponent],
   template: `
     <app-header />
     <div class="detail-page" *ngIf="course">
@@ -95,6 +96,29 @@ import Swal from 'sweetalert2';
             <!-- Content: Reviews -->
             <div *ngIf="activeTab === 'reviews'" class="tab-content review-section">
               <h3>Đánh giá từ học viên</h3>
+              
+              <div class="add-review card" *ngIf="isLoggedIn" style="margin-bottom: 20px; padding: 20px; background: var(--gray-50)">
+                <h4 style="margin-top:0">Viết đánh giá của bạn</h4>
+                <div style="margin-bottom: 12px">
+                  <label style="display:block; margin-bottom: 4px; font-weight:600">Điểm đánh giá</label>
+                  <select [(ngModel)]="reviewRating" class="form-control" style="width: 100px; padding: 8px; border: 1px solid var(--gray-300);">
+                    <option [value]="5">5 Sao</option>
+                    <option [value]="4">4 Sao</option>
+                    <option [value]="3">3 Sao</option>
+                    <option [value]="2">2 Sao</option>
+                    <option [value]="1">1 Sao</option>
+                  </select>
+                </div>
+                <div style="margin-bottom: 12px">
+                  <label style="display:block; margin-bottom: 4px; font-weight:600">Bình luận</label>
+                  <textarea [(ngModel)]="reviewText" rows="3" class="form-control" placeholder="Chia sẻ cảm nhận của bạn về khóa học này..." style="width: 100%; padding: 8px; border: 1px solid var(--gray-300); border-radius: 4px;"></textarea>
+                </div>
+                <button class="btn btn-primary" (click)="submitReview()">Gửi đánh giá</button>
+              </div>
+              <div *ngIf="!isLoggedIn" style="margin-bottom: 20px; padding: 15px; background: rgba(91,99,211,0.1); color: var(--primary); text-align: center; border-radius: 6px;">
+                Đăng nhập để để lại đánh giá cho khóa học này.
+              </div>
+
               <div *ngIf="!reviews.length" style="color:var(--gray-500); padding: 20px 0;">
                 Chưa có đánh giá nào cho khóa học này.
               </div>
@@ -148,7 +172,10 @@ import Swal from 'sweetalert2';
                   <ng-container *ngIf="!cartLoading"><i class="fa-solid fa-cart-shopping"></i> Thêm vào giỏ hàng</ng-container>
                   <ng-container *ngIf="cartLoading">⏳ Đang xử lý...</ng-container>
                 </button>
-                <button class="btn btn-outline" style="width:100%;margin-top:8px">♡ Thêm vào yêu thích</button>
+                <button class="btn btn-outline" style="width:100%;margin-top:8px" (click)="toggleLike()" [ngClass]="{'liked': isLiked}">
+                  <span *ngIf="!isLiked">♡ Thêm vào yêu thích</span>
+                  <span *ngIf="isLiked" style="color: red;">❤️ Đã yêu thích</span>
+                </button>
                 <p class="refund">🔒 Hoàn tiền 30 ngày</p>
                 <ul class="features">
                   <li>✔ Truy cập mọi lúc mọi nơi</li>
@@ -438,6 +465,13 @@ export class CourseDetailComponent implements OnInit {
   reviews: Review[] = [];
   similarCourses: any[] = [];
   cartLoading = false;
+  isLiked = false;
+  reviewText = '';
+  reviewRating = 5;
+
+  get isLoggedIn(): boolean {
+    return this.authService.isLoggedIn();
+  }
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
@@ -447,8 +481,19 @@ export class CourseDetailComponent implements OnInit {
         this.loadCourseData();
         this.loadReviews();
         this.loadSimilarCourses();
+        this.checkLikeStatus();
       }
     });
+  }
+
+  checkLikeStatus() {
+    if (this.authService.isLoggedIn()) {
+      this.apiService.getLikedCourses().subscribe({
+        next: (likes: any[]) => {
+          this.isLiked = likes.some((l: any) => l.maKhoaHoc === this.courseId || l.MaKhoaHoc === this.courseId);
+        }
+      });
+    }
   }
 
   loadCourseData() {
@@ -536,6 +581,43 @@ export class CourseDetailComponent implements OnInit {
           confirmButtonColor: '#5a67d8'
         });
       }
+    });
+  }
+
+  toggleLike() {
+    if (!this.authService.isLoggedIn()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Yêu cầu đăng nhập',
+        text: 'Vui lòng đăng nhập để lưu khóa học yêu thích.',
+        confirmButtonColor: '#5a67d8',
+      }).then((result) => {
+        if (result.isConfirmed) this.router.navigate(['/login']);
+      });
+      return;
+    }
+    this.apiService.toggleLike(this.courseId).subscribe({
+      next: (res) => {
+        this.isLiked = res.liked;
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message, showConfirmButton: false, timer: 2000 });
+      },
+      error: () => Swal.fire('Lỗi', 'Không thể thao tác yêu thích', 'error')
+    });
+  }
+
+  submitReview() {
+    if (!this.reviewText.trim()) {
+      Swal.fire('Lỗi', 'Vui lòng nhập nội dung đánh giá', 'warning');
+      return;
+    }
+    this.apiService.rateCourse(this.courseId, this.reviewRating, this.reviewText).subscribe({
+      next: (res) => {
+        Swal.fire('Thành công', res.message, 'success');
+        this.reviewText = '';
+        this.reviewRating = 5;
+        this.loadReviews();
+      },
+      error: (err) => Swal.fire('Lỗi', err.error?.message || 'Không thể gửi đánh giá', 'error')
     });
   }
 
