@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../core/services/auth.service';
+import { DataService } from '../../../core/services/data.service';
 
 @Component({
   selector: 'app-header',
@@ -21,6 +22,12 @@ import { AuthService } from '../../../core/services/auth.service';
           <a *ngIf="authService.isLoggedIn()" routerLink="/dashboard" routerLinkActive="active">Học tập của tôi</a>
         </nav>
         <div class="header-right">
+          <!-- Cart Button -->
+          <button class="icon-action-btn cart-btn" routerLink="/cart" title="Giỏ hàng" aria-label="Giỏ hàng">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span class="cart-badge" *ngIf="cartCount > 0">{{ cartCount }}</span>
+          </button>
+
           <ng-container *ngIf="!authService.isLoggedIn()">
             <a routerLink="/login" class="btn btn-outline btn-sm">Tham gia</a>
           </ng-container>
@@ -139,6 +146,27 @@ import { AuthService } from '../../../core/services/auth.service';
       color: #fff;
     }
 
+    .cart-btn {
+      position: relative;
+    }
+    .cart-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #ff4757;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      height: 18px;
+      min-width: 18px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      border: 2px solid var(--primary, #4361ee);
+    }
+
     .user-menu-pill {
       display: flex;
       align-items: center;
@@ -218,6 +246,11 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class HeaderComponent {
   authService = inject(AuthService);
+  dataService = inject(DataService);
+
+  get cartCount() {
+    return this.dataService.cartItems().length;
+  }
 
   getInitials() {
     const name = this.authService.userName() || 'HV';
