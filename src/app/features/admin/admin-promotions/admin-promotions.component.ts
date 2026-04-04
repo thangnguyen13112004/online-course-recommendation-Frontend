@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminLayoutComponent } from '../../../layouts/admin-layout/admin-layout.component';
 import { ApiService } from '../../../core/services/api.service';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-admin-promotions',
   standalone: true,
-  imports: [CommonModule, FormsModule, AdminLayoutComponent],
+  imports: [CommonModule, FormsModule, AdminLayoutComponent, PaginationComponent],
   template: `
     <app-admin-layout>
       <div class="promo-header">
@@ -89,6 +90,15 @@ import { ApiService } from '../../../core/services/api.service';
           </tbody>
         </table>
       </div>
+
+      <!-- Pagination -->
+      <app-pagination 
+        *ngIf="!isLoading"
+        [currentPage]="currentPromotionsPage"
+        [totalItems]="totalPromotions"
+        [pageSize]="10"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
 
       <!-- Add/Edit Modal -->
       <div class="modal-overlay" *ngIf="showModal" (click)="showModal = false">
@@ -233,6 +243,8 @@ export class AdminPromotionsComponent implements OnInit {
   private api = inject(ApiService);
 
   promotions: any[] = [];
+  totalPromotions = 0;
+  currentPromotionsPage = 1;
   isLoading = false;
   isSaving = false;
   showModal = false;
@@ -257,11 +269,14 @@ export class AdminPromotionsComponent implements OnInit {
     this.loadPromotions();
   }
 
-  loadPromotions() {
+  loadPromotions(page = 1) {
     this.isLoading = true;
-    this.api.getPromotions().subscribe({
+    this.api.getPromotions(page, 10).subscribe({
       next: (res) => {
-        this.promotions = Array.isArray(res) ? res : (res.data || []);
+        const raw = Array.isArray(res) ? res : (res.data || []);
+        this.promotions = raw;
+        this.totalPromotions = res.totalCount || raw.length;
+        this.currentPromotionsPage = res.page || page;
         this.isLoading = false;
       },
       error: () => {
@@ -269,6 +284,10 @@ export class AdminPromotionsComponent implements OnInit {
         this.showToast('Không thể tải dữ liệu khuyến mãi', 'error');
       }
     });
+  }
+
+  onPageChange(page: number) {
+    this.loadPromotions(page);
   }
 
   openAddModal() {

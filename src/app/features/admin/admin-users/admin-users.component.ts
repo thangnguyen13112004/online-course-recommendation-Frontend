@@ -4,22 +4,26 @@ import { FormsModule } from '@angular/forms';
 import { AdminLayoutComponent } from '../../../layouts/admin-layout/admin-layout.component';
 import { DataService } from '../../../core/services/data.service';
 import { ApiService } from '../../../core/services/api.service';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, AdminLayoutComponent],
+  imports: [CommonModule, FormsModule, AdminLayoutComponent, PaginationComponent],
   template: `
     <app-admin-layout>
       <h1><i class="fa-solid fa-clipboard-list"></i> Quản lý người dùng</h1>
 
       <!-- Filters -->
       <div class="filter-row">
-        <input type="text" class="form-input" placeholder="Tìm kiếm người dùng..." style="flex:1" (input)="searchUsers($event)">
+        <input type="text" class="form-input" placeholder="Tìm kiếm người dùng..." style="flex:1" [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange()">
         <div class="filter-select" (click)="filterByRole('')" [class.active]="filterRole === ''">Tất cả vai trò</div>
         <div class="filter-select" (click)="filterByRole('HocVien')" [class.active]="filterRole === 'HocVien'">Học viên</div>
         <div class="filter-select" (click)="filterByRole('GiaoVien')" [class.active]="filterRole === 'GiaoVien'">Giảng viên</div>
+        <div class="filter-select" (click)="filterByRole('Admin')" [class.active]="filterRole === 'Admin'">Admin</div>
       </div>
+
+
 
       <!-- User Stats -->
       <div class="user-stats">
@@ -42,7 +46,8 @@ import { ApiService } from '../../../core/services/api.service';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let user of filteredUsers()">
+            @for (user of dataService.users(); track user.id) {
+            <tr>
               <td>
                 <div class="user-cell">
                   <div class="avatar" [style.background]="user.color">
@@ -59,7 +64,7 @@ import { ApiService } from '../../../core/services/api.service';
               <td>{{ user.email }}</td>
               <td>
                 <select class="role-select" 
-                        [ngModel]="user.vaiTro"
+                        [ngModel]="user.role === 'admin' ? 'Admin' : (user.role === 'instructor' ? 'GiaoVien' : 'HocVien')"
                         (ngModelChange)="changeRole(user, $event)">
                   <option value="HocVien">Học viên</option>
                   <option value="GiaoVien">Giảng viên</option>
@@ -85,15 +90,25 @@ import { ApiService } from '../../../core/services/api.service';
                 </button>
               </td>
             </tr>
-            <tr *ngIf="dataService.users().length === 0">
+            } @empty {
+            <tr>
               <td colspan="6" style="text-align: center; padding: 40px; color: var(--gray-400);">
                 <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 24px; margin-bottom: 8px; display: block;"></i>
-                Đang tải...
+                Ngưới dùng đang trống hoặc đang tải...
               </td>
             </tr>
+            }
           </tbody>
         </table>
       </div>
+
+      <!-- Pagination -->
+      <app-pagination 
+        [currentPage]="dataService.currentUsersPage()"
+        [totalItems]="dataService.usersTotal()"
+        [pageSize]="10"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
 
       <!-- Toast -->
       <div class="toast" *ngIf="toastMessage" [class.error]="toastType === 'error'" (click)="toastMessage = ''">
@@ -172,6 +187,7 @@ export class AdminUsersComponent implements OnInit {
   private api = inject(ApiService);
 
   filterRole = '';
+  searchTerm = '';
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
 
@@ -180,19 +196,17 @@ export class AdminUsersComponent implements OnInit {
     this.dataService.loadAdminStats();
   }
 
-  searchUsers(event: any) {
-    const val = event.target.value;
-    this.dataService.loadUsers(1, val);
+  onSearchChange() {
+    this.dataService.loadUsers(1, this.searchTerm, this.filterRole);
+  }
+
+  onPageChange(page: number) {
+    this.dataService.loadUsers(page, this.searchTerm, this.filterRole);
   }
 
   filterByRole(role: string) {
     this.filterRole = role;
-  }
-
-  filteredUsers() {
-    const users = this.dataService.users();
-    if (!this.filterRole) return users;
-    return users.filter(u => u.vaiTro === this.filterRole);
+    this.dataService.loadUsers(1, this.searchTerm, this.filterRole);
   }
 
   changeRole(user: any, newRole: string) {

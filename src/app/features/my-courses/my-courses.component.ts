@@ -5,11 +5,12 @@ import { HeaderComponent } from '../../shared/components/header/header.component
 import { CourseCardComponent } from '../../shared/components/course-card/course-card.component';
 import { DataService } from '../../core/services/data.service';
 import { AuthService } from '../../core/services/auth.service';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-my-courses',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeaderComponent, CourseCardComponent],
+  imports: [CommonModule, RouterLink, HeaderComponent, CourseCardComponent, PaginationComponent],
   template: `
     <app-header />
     <div class="container my-page">
@@ -80,6 +81,14 @@ import { AuthService } from '../../core/services/auth.service';
             <a [routerLink]="['/learn', ec.course?.id || 'course', 'lesson', 1]" class="btn btn-primary btn-sm">► Tiếp tục</a>
           </div>
         </div>
+        
+        <!-- Pagination -->
+        <app-pagination 
+          [currentPage]="dataService.currentMyCoursesPage()"
+          [totalItems]="dataService.myCoursesTotal()"
+          [pageSize]="10"
+          (pageChange)="onPageChange($event)">
+        </app-pagination>
       </section>
 
       <!-- Certificates -->
@@ -247,5 +256,9 @@ export class MyCoursesComponent implements OnInit {
       this.dataService.loadMyCourses();
       this.dataService.loadCertificates();
     }
+  }
+
+  onPageChange(page: number) {
+    this.dataService.loadMyCourses(page);
   }
 }

@@ -72,8 +72,10 @@ export class ApiService {
   // ========================
   // CATEGORIES
   // ========================
-  getCategories(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/categories`);
+  getCategories(page = 1, pageSize = 100, search?: string): Observable<any> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (search) params = params.set('search', search);
+    return this.http.get(`${this.apiUrl}/categories`, { params });
   }
 
   getCategoryById(id: number): Observable<any> {
@@ -121,8 +123,9 @@ export class ApiService {
   // ========================
   // LEARNING
   // ========================
-  getMyCourses(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/learning/my-courses`);
+  getMyCourses(page = 1, pageSize = 10): Observable<any> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    return this.http.get(`${this.apiUrl}/learning/my-courses`, { params });
   }
 
   getCourseContent(courseId: number): Observable<any> {
@@ -140,10 +143,15 @@ export class ApiService {
   // ========================
   // USERS (Admin)
   // ========================
-  getUsers(page = 1, pageSize = 10, search?: string): Observable<any> {
+  getUsers(page = 1, pageSize = 10, search?: string, vaiTro?: string): Observable<any> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (search) params = params.set('search', search);
+    if (vaiTro) params = params.set('vaiTro', vaiTro);
     return this.http.get(`${this.apiUrl}/users`, { params });
+  }
+
+  getUserStats(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/users/stats`);
   }
 
   getUserProfile(): Observable<any> {
@@ -169,8 +177,10 @@ export class ApiService {
   // ========================
   // PROMOTIONS (Admin)
   // ========================
-  getPromotions(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/promotions`);
+  getPromotions(page = 1, pageSize = 10, search?: string): Observable<any> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (search) params = params.set('search', search);
+    return this.http.get(`${this.apiUrl}/promotions`, { params });
   }
 
   createPromotion(data: { tenChuongTrinh: string; phanTramGiam?: number; ngayBatDau?: string; ngayKetThuc?: string }): Observable<any> {
