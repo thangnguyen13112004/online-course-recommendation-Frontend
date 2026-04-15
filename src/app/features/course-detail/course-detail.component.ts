@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -35,7 +35,7 @@ import Swal from 'sweetalert2';
               <span><i class="fa-solid fa-star" style="color: #fccc29;"></i> {{ course.tbdanhGia | number:'1.1-1' }} ({{ course.soLuongDanhGia }} đánh giá)</span>
               <span><i class="fa-solid fa-users"></i> {{ course.soHocVien | number }} học viên</span>
               <span><i class="fa-solid fa-box"></i> {{ course.soLuongBaiHoc }} bài học</span>
-              <span>📅 {{ course.ngayCapNhat ? (course.ngayCapNhat | date:'yyyy') : '2024' }}</span>
+              <span><i class="fa-solid fa-calendar-days"></i> {{ course.ngayCapNhat ? (course.ngayCapNhat | date:'yyyy') : '2024' }}</span>
             </div>
             <div class="instructor-row" *ngIf="course.giangVien?.length">
               Giảng viên: <strong>{{ course.giangVien![0].ten }}</strong>
@@ -65,7 +65,7 @@ import Swal from 'sweetalert2';
                 <h3 *ngIf="course.kiNang">Kỹ năng bạn sẽ đạt được</h3>
                 <div class="learn-grid" *ngIf="course.kiNang">
                   <div class="learn-item" *ngFor="let skill of course.kiNang.split(',')">
-                    ✔ {{ skill.trim() }}
+                    <i class="fa-solid fa-circle-check" style="color: var(--success)"></i> {{ skill.trim() }}
                   </div>
                 </div>
               </div>
@@ -85,7 +85,7 @@ import Swal from 'sweetalert2';
                   <div class="chapter-lessons">
                     <div class="lesson-item" *ngFor="let lesson of chapter.baiHocs">
                       <span class="lesson-icon" *ngIf="lesson.linkVideo"><i class="fa-solid fa-play"></i></span>
-                      <span class="lesson-icon" *ngIf="!lesson.linkVideo">📄</span>
+                      <span class="lesson-icon" *ngIf="!lesson.linkVideo"><i class="fa-solid fa-file-lines"></i></span>
                       <span class="lesson-title">{{ lesson.lyThuyet ? lesson.lyThuyet.substring(0, 50) + '...' : 'Bài học' }}</span>
                     </div>
                   </div>
@@ -95,62 +95,107 @@ import Swal from 'sweetalert2';
 
             <!-- Content: Reviews -->
             <div *ngIf="activeTab === 'reviews'" class="tab-content review-section">
-              <h3>Đánh giá từ học viên</h3>
-              
-              <div class="add-review card" *ngIf="isLoggedIn" style="margin-bottom: 20px; padding: 20px; background: var(--gray-50)">
-                <h4 style="margin-top:0">Viết đánh giá của bạn</h4>
-                <div style="margin-bottom: 12px">
-                  <label style="display:block; margin-bottom: 4px; font-weight:600">Điểm đánh giá</label>
-                  <select [(ngModel)]="reviewRating" class="form-control" style="width: 100px; padding: 8px; border: 1px solid var(--gray-300);">
-                    <option [value]="5">5 Sao</option>
-                    <option [value]="4">4 Sao</option>
-                    <option [value]="3">3 Sao</option>
-                    <option [value]="2">2 Sao</option>
-                    <option [value]="1">1 Sao</option>
-                  </select>
+              <h3><i class="fa-solid fa-comments" style="color: var(--primary)"></i> Đánh giá từ học viên</h3>
+
+              <!-- Rating Summary -->
+              <div class="rating-summary card" *ngIf="reviews.length">
+                <div class="rating-big">
+                  <span class="big-number">{{ course.tbdanhGia | number:'1.1-1' }}</span>
+                  <div class="big-stars">
+                    <i *ngFor="let s of starsArr" class="fa-solid fa-star" [style.color]="s <= (course.tbdanhGia || 0) ? '#fccc29' : '#e5e7eb'"></i>
+                  </div>
+                  <span class="rating-count">{{ course.soLuongDanhGia }} đánh giá</span>
                 </div>
-                <div style="margin-bottom: 12px">
-                  <label style="display:block; margin-bottom: 4px; font-weight:600">Bình luận</label>
-                  <textarea [(ngModel)]="reviewText" rows="3" class="form-control" placeholder="Chia sẻ cảm nhận của bạn về khóa học này..." style="width: 100%; padding: 8px; border: 1px solid var(--gray-300); border-radius: 4px;"></textarea>
-                </div>
-                <button class="btn btn-primary" (click)="submitReview()">Gửi đánh giá</button>
-              </div>
-              <div *ngIf="!isLoggedIn" style="margin-bottom: 20px; padding: 15px; background: rgba(91,99,211,0.1); color: var(--primary); text-align: center; border-radius: 6px;">
-                Đăng nhập để để lại đánh giá cho khóa học này.
               </div>
 
-              <div *ngIf="!reviews.length" style="color:var(--gray-500); padding: 20px 0;">
-                Chưa có đánh giá nào cho khóa học này.
+              <!-- Form đánh giá: chỉ hiện khi đã mua và chưa đánh giá -->
+              <div class="add-review card" *ngIf="isLoggedIn && isEnrolled && !hasReviewed">
+                <h4><i class="fa-solid fa-pen-to-square"></i> Viết đánh giá của bạn</h4>
+                <div class="star-picker">
+                  <label>Điểm đánh giá (Chọn từ 1-5 sao)</label>
+                  <div class="stars-input" style="display: flex; gap: 8px; margin-top: 8px;">
+                    <span *ngFor="let s of [1,2,3,4,5]" 
+                          (click)="reviewRating = s" 
+                          style="font-size: 32px; cursor: pointer;"
+                          [style.color]="s <= reviewRating ? '#fccc29' : '#e5e7eb'">
+                      ★
+                    </span>
+                    <span style="align-self: center; margin-left: 10px; font-weight: bold; color: var(--gray-600)">{{ reviewRating }} sao</span>
+                  </div>
+                </div>
+                <div class="review-input" style="margin-top: 15px;">
+                  <label>Bình luận của bạn</label>
+                  <textarea [(ngModel)]="reviewText" rows="3" class="form-control" [placeholder]="'Cảm nghĩ của bạn về khóa học này...'"></textarea>
+                </div>
+                <div style="margin-top: 15px;">
+                  <button class="btn btn-primary" (click)="submitReview()" [disabled]="reviewSubmitting" style="padding: 10px 25px; font-weight: bold;">
+                    {{ reviewSubmitting ? 'ĐANG GỬI...' : 'GỬI ĐÁNH GIÁ' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Đã đánh giá -->
+              <div *ngIf="isLoggedIn && isEnrolled && hasReviewed" class="already-reviewed">
+                <i class="fa-solid fa-circle-check"></i> Bạn đã đánh giá khóa học này rồi. Cảm ơn bạn!
+              </div>
+
+              <!-- Chưa mua -->
+              <div *ngIf="isLoggedIn && !isEnrolled" class="need-purchase">
+                <i class="fa-solid fa-lock"></i> Bạn cần mua khóa học này trước khi có thể đánh giá.
+              </div>
+
+              <!-- Chưa đăng nhập -->
+              <div *ngIf="!isLoggedIn" class="need-login">
+                <i class="fa-solid fa-right-to-bracket"></i> <a routerLink="/login">Đăng nhập</a> để đánh giá khóa học này.
+              </div>
+
+              <!-- Danh sách đánh giá -->
+              <div *ngIf="!reviews.length" class="no-reviews">
+                <i class="fa-solid fa-message" style="font-size: 24px; color: var(--gray-400); margin-bottom: 8px"></i>
+                <p>Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
               </div>
               <div class="review-card card" *ngFor="let review of reviews">
                 <div class="review-header">
-                  <div class="avatar" style="background:var(--primary-bg);color:var(--primary)">
+                  <div class="avatar" [style.background]="getAvatarColor(review.nguoiDanhGia?.ten)">
                     {{ getInitials(review.nguoiDanhGia?.ten) }}
                   </div>
-                  <div>
+                  <div class="review-meta">
                     <strong>{{ review.nguoiDanhGia?.ten || 'Học viên ẩn danh' }}</strong>
-                    <div class="stars">
-                      {{ getStars(review.rating) }}
-                      <span style="font-size: 11px; margin-left: 4px; color: var(--gray-400)">{{ review.ngayDanhGia | date:'dd/MM/yyyy' }}</span>
+                    <div class="review-stars">
+                      <i *ngFor="let s of [1,2,3,4,5]" class="fa-solid fa-star" [style.color]="s <= (review.rating || 0) ? '#fccc29' : '#e5e7eb'" style="font-size: 12px"></i>
+                      <span class="review-date">{{ review.ngayDanhGia | date:'dd/MM/yyyy' }}</span>
                     </div>
                   </div>
                 </div>
-                <p>{{ review.binhLuan || 'Người dùng không để lại bình luận.' }}</p>
+                <p class="review-text">{{ review.binhLuan || 'Người dùng không để lại bình luận.' }}</p>
               </div>
             </div>
 
             <!-- Content: Instructor -->
             <div *ngIf="activeTab === 'instructor'" class="tab-content">
-               <h3>Giảng viên</h3>
-               <div class="instructor-card card" *ngFor="let ins of course.giangVien">
-                 <div class="ins-header">
-                   <div class="ins-avatar">
-                     <img *ngIf="ins.linkAnhDaiDien" [src]="ins.linkAnhDaiDien" alt="">
-                     <span *ngIf="!ins.linkAnhDaiDien" style="font-size: 24px; color: var(--gray-600)">{{ getInitials(ins.ten) }}</span>
+               <h3 style="margin-bottom: 24px;"><i class="fa-solid fa-chalkboard-user" style="color: var(--primary); margin-right: 8px;"></i> Đội ngũ Giảng viên</h3>
+               
+               <!-- Fallback when no instructor is assigned -->
+               <div *ngIf="!course.giangVien || course.giangVien.length === 0" style="padding: 40px 20px; text-align: center; border: 1px dashed var(--gray-300); border-radius: var(--radius-md); background: var(--gray-50);">
+                 <i class="fa-solid fa-user-graduate" style="font-size: 48px; color: var(--gray-400); margin-bottom: 16px; display: block;"></i>
+                 <h4 style="color: var(--gray-600); margin-bottom: 8px;">Thông tin đang cập nhật</h4>
+                 <p style="color: var(--gray-500); font-size: 14px;">Giảng viên cho khóa học này sẽ được bổ sung trong thời gian sớm nhất.</p>
+               </div>
+
+               <!-- Instructor list -->
+               <div class="instructor-card card" *ngFor="let ins of course.giangVien" style="margin-bottom: 20px; padding: 24px;">
+                 <div class="ins-header" style="display: flex; gap: 20px; align-items: flex-start;">
+                   <div class="ins-avatar" style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: var(--gray-100); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                     <img *ngIf="ins.linkAnhDaiDien" [src]="ins.linkAnhDaiDien" alt="{{ins.ten}}" style="width: 100%; height: 100%; object-fit: cover;">
+                     <span *ngIf="!ins.linkAnhDaiDien" style="font-size: 32px; color: var(--gray-500); font-weight: bold;">{{ getInitials(ins.ten) }}</span>
                    </div>
-                   <div class="ins-info">
-                     <h4 style="margin: 0; font-size: 18px">{{ ins.ten }}</h4>
-                     <p style="color: var(--gray-500); font-size: 14px; margin: 4px 0 0 0">{{ ins.laGiangVienChinh ? 'Giảng viên chính' : 'Trợ giảng' }}</p>
+                   <div class="ins-info" style="flex: 1;">
+                     <h4 style="margin: 0 0 4px 0; font-size: 20px; color: var(--text-dark);">{{ ins.ten || 'Giảng viên' }}</h4>
+                     <p style="color: var(--primary); font-size: 14px; font-weight: 500; margin: 0 0 12px 0;">
+                       <i class="fa-solid fa-star" style="color: #fccc29; margin-right: 4px;"></i> Giảng viên
+                     </p>
+                     <p *ngIf="ins.tieuSu" style="color: var(--gray-600); font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-line;">{{ ins.tieuSu }}</p>
+                     <p *ngIf="!ins.tieuSu" style="color: var(--gray-500); font-size: 14px; margin: 0; font-style: italic;">Chưa có thông tin tiểu sử.</p>
                    </div>
                  </div>
                </div>
@@ -168,20 +213,30 @@ import Swal from 'sweetalert2';
                 <span class="price-main">{{ getDiscountedPrice(course) | number }}đ</span>
                 <span class="price-original" *ngIf="course.khuyenMai">{{ course.giaGoc | number }}đ</span>
                 
-                <button class="btn btn-primary btn-lg" style="width:100%" (click)="addToCart()" [disabled]="cartLoading">
-                  <ng-container *ngIf="!cartLoading"><i class="fa-solid fa-cart-shopping"></i> Thêm vào giỏ hàng</ng-container>
-                  <ng-container *ngIf="cartLoading">⏳ Đang xử lý...</ng-container>
-                </button>
+                <ng-container *ngIf="isEnrolled">
+                  <a [routerLink]="['/learn', courseId, 'lesson', 1]" class="btn btn-success btn-lg" style="width:100%; text-align:center; text-decoration:none;">
+                    <i class="fa-solid fa-play"></i> Vào học ngay
+                  </a>
+                  <div class="enrolled-badge">
+                    <i class="fa-solid fa-circle-check"></i> Bạn đã sở hữu khóa học này
+                  </div>
+                </ng-container>
+                <ng-container *ngIf="!isEnrolled">
+                  <button class="btn btn-primary btn-lg" style="width:100%" (click)="addToCart()" [disabled]="cartLoading">
+                    <ng-container *ngIf="!cartLoading"><i class="fa-solid fa-cart-shopping"></i> Thêm vào giỏ hàng</ng-container>
+                    <ng-container *ngIf="cartLoading"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...</ng-container>
+                  </button>
+                </ng-container>
                 <button class="btn btn-outline" style="width:100%;margin-top:8px" (click)="toggleLike()" [ngClass]="{'liked': isLiked}">
-                  <span *ngIf="!isLiked">♡ Thêm vào yêu thích</span>
-                  <span *ngIf="isLiked" style="color: red;">❤️ Đã yêu thích</span>
+                  <span *ngIf="!isLiked"><i class="fa-regular fa-heart"></i> Thêm vào yêu thích</span>
+                  <span *ngIf="isLiked" style="color: #e53e3e;"><i class="fa-solid fa-heart"></i> Đã yêu thích</span>
                 </button>
-                <p class="refund">🔒 Hoàn tiền 30 ngày</p>
+                <p class="refund"><i class="fa-solid fa-lock"></i> Hoàn tiền 30 ngày</p>
                 <ul class="features">
-                  <li>✔ Truy cập mọi lúc mọi nơi</li>
-                  <li>✔ Học trên nhiều thiết bị</li>
-                  <li>✔ Chứng chỉ hoàn thành</li>
-                  <li>✔ Tài liệu tải về</li>
+                  <li><i class="fa-solid fa-check" style="color: var(--success)"></i> Truy cập mọi lúc mọi nơi</li>
+                  <li><i class="fa-solid fa-check" style="color: var(--success)"></i> Học trên nhiều thiết bị</li>
+                  <li><i class="fa-solid fa-check" style="color: var(--success)"></i> Chứng chỉ hoàn thành</li>
+                  <li><i class="fa-solid fa-check" style="color: var(--success)"></i> Tài liệu tải về</li>
                 </ul>
               </div>
             </div>
@@ -344,8 +399,62 @@ import Swal from 'sweetalert2';
     .avatar {
       width: 40px; height: 40px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-weight: bold;
+      font-weight: bold; color: white; font-size: 14px;
     }
+    .rating-summary {
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(91,99,211,0.05), rgba(91,99,211,0.1));
+      border: 1px solid rgba(91,99,211,0.15);
+    }
+    .big-number { font-size: 48px; font-weight: 800; color: var(--primary); display: block; }
+    .big-stars { font-size: 20px; margin: 4px 0; }
+    .big-stars i { margin: 0 2px; }
+    .rating-count { font-size: 13px; color: var(--gray-500); }
+    .add-review {
+      padding: 24px;
+      margin-bottom: 20px;
+      background: var(--gray-50);
+      border: 1px dashed var(--gray-300);
+    }
+    .add-review h4 { margin: 0 0 16px; font-size: 15px; }
+    .add-review h4 i { margin-right: 6px; color: var(--primary); }
+    .star-picker { margin-bottom: 16px; }
+    .star-picker label, .review-input label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; }
+    .stars-input { display: flex; align-items: center; gap: 4px; }
+    .star-pick { font-size: 24px; color: #e5e7eb; cursor: pointer; transition: all 0.15s; }
+    .star-pick.active { color: #fccc29; }
+    .star-pick:hover { transform: scale(1.2); }
+    .star-label { margin-left: 8px; font-size: 13px; color: var(--gray-500); font-weight: 600; }
+    .review-input { margin-bottom: 16px; }
+    .review-input textarea {
+      width: 100%; padding: 12px; border: 1px solid var(--gray-300);
+      border-radius: var(--radius-sm); font-size: 14px; resize: vertical;
+    }
+    .review-input textarea:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(91,99,211,0.1); }
+    .already-reviewed, .need-purchase, .need-login, .no-reviews {
+      padding: 16px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .already-reviewed { background: rgba(16,185,129,0.1); color: #059669; }
+    .already-reviewed i { margin-right: 4px; }
+    .need-completion { background: rgba(59,130,246,0.1); color: #3182ce; padding: 16px 20px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 20px; text-align: center; }
+    .need-completion i { margin-right: 4px; }
+    .need-purchase { background: rgba(245,158,11,0.1); color: #D97706; }
+    .need-purchase i { margin-right: 4px; }
+    .need-login { background: rgba(91,99,211,0.08); color: var(--primary); }
+    .need-login i { margin-right: 4px; }
+    .need-login a { color: var(--primary); font-weight: 700; text-decoration: underline; }
+    .no-reviews { color: var(--gray-500); padding: 32px 20px; }
+    .review-card { padding: 16px; margin-bottom: 12px; }
+    .review-meta { flex: 1; }
+    .review-stars { display: flex; align-items: center; gap: 2px; margin-top: 2px; }
+    .review-date { font-size: 11px; margin-left: 6px; color: var(--gray-400); }
+    .review-text { font-size: 14px; color: var(--gray-600); line-height: 1.5; margin: 8px 0 0; }
     .instructor-card {
       padding: 24px;
     }
@@ -409,6 +518,31 @@ import Swal from 'sweetalert2';
       padding: 4px 0;
       color: var(--gray-600);
     }
+    .features li i {
+      margin-right: 6px;
+    }
+    .enrolled-badge {
+      text-align: center;
+      padding: 12px;
+      margin-top: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10B981;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .enrolled-badge i {
+      margin-right: 4px;
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: white;
+      border: none;
+      display: inline-block;
+    }
+    .btn-success:hover {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
     .related-section {
       margin-top: 24px;
     }
@@ -456,6 +590,7 @@ export class CourseDetailComponent implements OnInit {
   private apiService = inject(ApiService);
   private dataService = inject(DataService);
   private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   courseId!: number;
   course: CourseDetail | null = null;
@@ -466,6 +601,11 @@ export class CourseDetailComponent implements OnInit {
   similarCourses: any[] = [];
   cartLoading = false;
   isLiked = false;
+  isEnrolled = false;
+  enrollmentProgress = 0;
+  hasReviewed = false;
+  starsArr = [1, 2, 3, 4, 5];
+  reviewSubmitting = false;
   reviewText = '';
   reviewRating = 5;
 
@@ -482,6 +622,7 @@ export class CourseDetailComponent implements OnInit {
         this.loadReviews();
         this.loadSimilarCourses();
         this.checkLikeStatus();
+        this.checkEnrolledStatus();
       }
     });
   }
@@ -504,25 +645,39 @@ export class CourseDetailComponent implements OnInit {
         console.log('[CourseDetail] API response received:', data);
         this.course = data as CourseDetail;
         this.loading = false;
+        this.cdr.detectChanges();
         console.log('[CourseDetail] course set, loading =', this.loading);
       },
       error: (err) => {
         console.error('[CourseDetail] API error:', err);
         this.course = null;
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }
 
   loadReviews() {
     this.apiService.getCourseReviews(this.courseId).subscribe({
-      next: (res) => {
-        this.reviews = res.data || [];
+      next: (res: any) => {
+        // API returns { totalCount, page, pageSize, data: [...] }
+        this.reviews = res?.data || res || [];
+        this.checkIfUserReviewed();
+        this.cdr.detectChanges();
       },
       error: () => {
         this.reviews = [];
+        this.cdr.detectChanges();
       }
     });
+  }
+
+  checkIfUserReviewed() {
+    if (this.authService.isLoggedIn() && this.reviews && Array.isArray(this.reviews)) {
+      const currentUserId = this.authService.currentUser()?.userId;
+      // Match by exact user ID instead of name
+      this.hasReviewed = this.reviews.some((r: any) => r.nguoiDanhGia?.maNguoiDung === currentUserId);
+    }
   }
 
   loadSimilarCourses() {
@@ -534,6 +689,23 @@ export class CourseDetailComponent implements OnInit {
         this.similarCourses = [];
       }
     });
+  }
+
+  checkEnrolledStatus() {
+    if (this.authService.isLoggedIn()) {
+      this.apiService.getMyCourses(1, 100).subscribe({
+        next: (res: any) => {
+          const data = Array.isArray(res) ? res : (res.data || []);
+          const enrollment = data.find((t: any) => t.khoaHoc?.maKhoaHoc === this.courseId);
+          this.isEnrolled = !!enrollment;
+          this.enrollmentProgress = enrollment?.phanTramTienDo ?? 0;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.cdr.detectChanges();
+        }
+      });
+    }
   }
 
   goToCourse(id: number) {
@@ -610,15 +782,34 @@ export class CourseDetailComponent implements OnInit {
       Swal.fire('Lỗi', 'Vui lòng nhập nội dung đánh giá', 'warning');
       return;
     }
+    this.reviewSubmitting = true;
     this.apiService.rateCourse(this.courseId, this.reviewRating, this.reviewText).subscribe({
       next: (res) => {
+        this.reviewSubmitting = false;
         Swal.fire('Thành công', res.message, 'success');
         this.reviewText = '';
         this.reviewRating = 5;
+        this.hasReviewed = true;
         this.loadReviews();
+        this.loadCourseData(); // Reload course score
       },
-      error: (err) => Swal.fire('Lỗi', err.error?.message || 'Không thể gửi đánh giá', 'error')
+      error: (err) => {
+        this.reviewSubmitting = false;
+        Swal.fire('Lỗi', err.error?.message || 'Không thể gửi đánh giá', 'error');
+      }
     });
+  }
+
+  getAvatarColor(name?: string): string {
+    if (!name) return '#94a3b8';
+    const colors = [
+      '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
   }
 
   getDiscountedPrice(course: CourseDetail): number {

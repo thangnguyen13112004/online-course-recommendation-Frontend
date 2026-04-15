@@ -31,7 +31,7 @@ import { AuthService } from '../../core/services/auth.service';
           </a>
           <a routerLink="/admin/categories" routerLinkActive="active" class="nav-item">
             <span class="nav-icon"><i class="fa-solid fa-folder-open"></i></span>
-            <span class="nav-text">Danh mục KH</span>
+            <span class="nav-text">Thể loại</span>
           </a>
           <a routerLink="/admin/courses/approvals" routerLinkActive="active" class="nav-item">
             <span class="nav-icon"><i class="fa-solid fa-clipboard-check"></i></span>

@@ -10,6 +10,8 @@ export class DataService {
 
   // Signals cho UI binding
   readonly courses = signal<Course[]>([]);
+  readonly coursesTotal = signal<number>(0);
+  readonly currentCoursePage = signal<number>(1);
   readonly users = signal<User[]>([]);
   readonly promotions = signal<Promotion[]>([]);
   readonly enrolledCourses = signal<EnrolledCourse[]>([]);
@@ -18,6 +20,18 @@ export class DataService {
   readonly cartTotal = signal<number>(0);
   readonly categories = signal<string[]>(['Tất cả']);
   readonly categoriesRaw = signal<Category[]>([]);
+  readonly currentCategoriesPage = signal<number>(1);
+  readonly categoriesTotal = signal<number>(0);
+  
+  readonly currentPromotionsPage = signal<number>(1);
+  readonly promotionsTotal = signal<number>(0);
+  
+  readonly currentUsersPage = signal<number>(1);
+  readonly usersTotal = signal<number>(0);
+  
+  readonly currentMyCoursesPage = signal<number>(1);
+  readonly myCoursesTotal = signal<number>(0);
+  
   readonly adminStats = signal({
     totalUsers: 0,
     students: 0,
@@ -39,10 +53,14 @@ export class DataService {
   // ========================
   // COURSES
   // ========================
-  loadCourses(params?: { search?: string; categoryId?: number; sortBy?: string; page?: number }) {
+  loadCourses(params?: { search?: string; categoryId?: number; sortBy?: string; page?: number; append?: boolean }) {
+    if (!params?.append && !this.loadingCourses()) {
+      // Opt: có thể clear mảng if needed, nhưng giữ lại loading sẽ UX tốt hơn
+    }
     this.loadingCourses.set(true);
+    const page = params?.page ?? 1;
     this.api.getCourses({
-      page: params?.page ?? 1,
+      page: page,
       pageSize: 12,
       search: params?.search,
       categoryId: params?.categoryId,
@@ -50,7 +68,13 @@ export class DataService {
     }).subscribe({
       next: (res) => {
         const mapped = (res.data || []).map((k: any) => this.mapCourseFromApi(k));
-        this.courses.set(mapped);
+        if (params?.append) {
+          this.courses.update(c => [...c, ...mapped]);
+        } else {
+          this.courses.set(mapped);
+        }
+        this.coursesTotal.set(res.totalCount || 0);
+        this.currentCoursePage.set(page);
         this.loadingCourses.set(false);
       },
       error: () => this.loadingCourses.set(false)
@@ -60,11 +84,18 @@ export class DataService {
   // ========================
   // CATEGORIES
   // ========================
-  loadCategories() {
-    this.api.getCategories().subscribe({
-      next: (cats: Category[]) => {
+  loadCategories(page = 1) {
+    this.api.getCategories(page, 10).subscribe({
+      next: (res: any) => {
+        const cats = Array.isArray(res) ? res : (res.data || []);
         this.categoriesRaw.set(cats);
-        const names = ['Tất cả', ...cats.map(c => c.ten)];
+        this.categoriesTotal.set(res.totalCount || cats.length);
+        this.currentCategoriesPage.set(res.page || page);
+        
+        // Cập nhật mảng categories (cho các Dropdown không dùng phân trang)
+        // Lưu ý: Nếu cần load TOÀN BỘ dropdown, phải gọi 1 API riêng hoặc lấy pageSize rất lớn.
+        // Tạm thời ở đây ta vẫn ánh xạ cats cho Home.
+        const names = ['Tất cả', ...cats.map((c: any) => c.ten || c.Ten || c.name || c.TenTheLoai || 'Chưa đặt tên')];
         this.categories.set(names);
       }
     });
@@ -110,10 +141,11 @@ export class DataService {
   // ========================
   // LEARNING
   // ========================
-  loadMyCourses() {
+  loadMyCourses(page = 1) {
     if (!this.auth.isLoggedIn()) return;
-    this.api.getMyCourses().subscribe({
-      next: (data: any[]) => {
+    this.api.getMyCourses(page, 10).subscribe({
+      next: (res: any) => {
+        const data = Array.isArray(res) ? res : (res.data || []);
         const mapped = (data || []).map((t: any) => ({
           ...t,
           course: {
@@ -128,6 +160,8 @@ export class DataService {
           progress: t.phanTramTienDo ?? 0
         }));
         this.enrolledCourses.set(mapped);
+        this.myCoursesTotal.set(res.totalCount || data.length);
+        this.currentMyCoursesPage.set(res.page || page);
       }
     });
   }
@@ -151,33 +185,32 @@ export class DataService {
   // ========================
   // USERS (Admin)
   // ========================
-  loadUsers(page = 1, search?: string) {
-    this.api.getUsers(page, 10, search).subscribe({
+  loadUsers(page = 1, search?: string, vaiTro?: string) {
+    this.api.getUsers(page, 10, search, vaiTro).subscribe({
       next: (res) => {
-        const mapped = (res.data || []).map((u: any) => this.mapUserFromApi(u));
+        const raw = Array.isArray(res) ? res : (res.data || []);
+        const mapped = raw.map((u: any) => this.mapUserFromApi(u));
         this.users.set(mapped);
-        
+        this.usersTotal.set(res.totalCount || raw.length);
+        this.currentUsersPage.set(res.page || page);
+
         // Cập nhật thống kê sơ bộ (từ trang đầu tiên trả về totalCount)
         if (page === 1) {
-          this.adminStats.update(s => ({ ...s, totalUsers: res.totalCount }));
+          this.adminStats.update(s => ({ ...s, totalUsers: res.totalCount || raw.length }));
         }
       }
     });
   }
 
   loadAdminStats() {
-    // Gọi các endpoint nhẹ nhàng để lấy con số tổng quát
-    this.api.getUsers(1, 1).subscribe(res => {
-      this.adminStats.update(s => ({ ...s, totalUsers: res.totalCount }));
-    });
-
-    // Lấy danh sách để đếm vai trò (tạm thời lấy page 1, 100 users đầu tiên)
-    this.api.getUsers(1, 100).subscribe(res => {
-      const data = res.data || [];
-      const students = data.filter((u: any) => u.vaiTro === 'HocVien').length;
-      const instructors = data.filter((u: any) => u.vaiTro === 'GiaoVien').length;
-      const admins = data.filter((u: any) => u.vaiTro === 'Admin').length;
-      this.adminStats.update(s => ({ ...s, students, instructors, admins }));
+    this.api.getUserStats().subscribe(res => {
+      this.adminStats.update(s => ({
+        ...s,
+        totalUsers: res.totalUsers,
+        students: res.students,
+        instructors: res.instructors,
+        admins: res.admins
+      }));
     });
 
     this.api.getCourses({ page: 1, pageSize: 1 }).subscribe(res => {

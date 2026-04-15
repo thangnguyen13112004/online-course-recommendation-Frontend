@@ -25,14 +25,16 @@ import Swal from 'sweetalert2';
 
         <div class="filter-group">
           <h4>Danh mục</h4>
-          <label *ngFor="let cat of dataService.categories()" class="radio-item">
-            <input type="radio" name="category"
-                   [value]="cat"
-                   [(ngModel)]="selectedCategory"
-                   (ngModelChange)="onFilterChange()">
-            <span class="radio-custom"></span>
-            <span>{{ cat }}</span>
-          </label>
+          <div class="filter-scrollable">
+            <label *ngFor="let cat of dataService.categories()" class="radio-item">
+              <input type="radio" name="category"
+                     [value]="cat"
+                     [(ngModel)]="selectedCategory"
+                     (ngModelChange)="onFilterChange()">
+              <span class="radio-custom"></span>
+              <span>{{ cat }}</span>
+            </label>
+          </div>
         </div>
 
         <div class="filter-group">
@@ -83,10 +85,11 @@ import Swal from 'sweetalert2';
           <span *ngIf="dataService.loadingCourses()">
             <i class="fa-solid fa-spinner fa-spin"></i> Đang tải danh sách khóa học...
           </span>
-          <span *ngIf="!dataService.loadingCourses()">
-            Hiển thị <strong>{{ filteredCourses().length }} khóa học</strong>
+          <span *ngIf="!dataService.loadingCourses() || dataService.courses().length > 0">
+            Hiển thị <strong>{{ filteredCourses().length }}</strong> 
+            / <span class="total-text">{{ dataService.coursesTotal() }} khóa học</span>
             <span *ngIf="filteredCourses().length !== dataService.courses().length" class="filter-count">
-              (lọc từ {{ dataService.courses().length }})
+              (lọc từ {{ dataService.courses().length }} đang tải)
             </span>
           </span>
           <div class="sort-wrapper">
@@ -136,15 +139,6 @@ import Swal from 'sweetalert2';
           </span>
         </div>
 
-        <div class="category-tags">
-          <button *ngFor="let cat of dataService.categories()"
-                  class="cat-tag"
-                  [class.active]="cat === selectedCategory"
-                  (click)="selectCategory(cat)">
-            {{ cat }}
-          </button>
-        </div>
-
         <!-- Course Grid -->
         <div class="course-grid" *ngIf="filteredCourses().length > 0">
           <div *ngFor="let course of filteredCourses()" class="course-item card">
@@ -168,6 +162,29 @@ import Swal from 'sweetalert2';
             </div>
             <button class="btn btn-primary btn-sm add-cart" (click)="addToCart(course.id)">+ Giỏ hàng</button>
           </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-wrapper" *ngIf="totalPages > 1">
+          <button class="page-btn" [disabled]="dataService.currentCoursePage() === 1" (click)="goToPage(dataService.currentCoursePage() - 1)">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+          
+          <button class="page-btn" *ngIf="pages[0] > 1" (click)="goToPage(1)">1</button>
+          <span class="page-dots" *ngIf="pages[0] > 2">...</span>
+          
+          <button class="page-btn" *ngFor="let p of pages" 
+                  [class.active]="p === dataService.currentCoursePage()"
+                  (click)="goToPage(p)">
+            {{ p }}
+          </button>
+          
+          <span class="page-dots" *ngIf="pages[pages.length - 1] < totalPages - 1">...</span>
+          <button class="page-btn" *ngIf="pages[pages.length - 1] < totalPages" (click)="goToPage(totalPages)">{{ totalPages }}</button>
+
+          <button class="page-btn" [disabled]="dataService.currentCoursePage() === totalPages" (click)="goToPage(dataService.currentCoursePage() + 1)">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
         </div>
 
         <!-- Empty State -->
@@ -242,6 +259,18 @@ import Swal from 'sweetalert2';
       color: var(--gray-700);
       text-transform: uppercase;
       letter-spacing: 0.5px;
+    }
+    .filter-scrollable {
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .filter-scrollable::-webkit-scrollbar {
+      width: 4px;
+    }
+    .filter-scrollable::-webkit-scrollbar-thumb {
+      background: var(--gray-300);
+      border-radius: 4px;
     }
 
     /* ===== Custom Radio Buttons ===== */
@@ -479,6 +508,52 @@ import Swal from 'sweetalert2';
     }
     .add-cart { margin: 0 12px 12px; }
 
+    /* ===== Pagination ===== */
+    .pagination-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 40px;
+      margin-bottom: 20px;
+    }
+    .page-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--gray-300);
+      background: var(--white);
+      color: var(--gray-600);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .page-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .page-btn.active {
+      background: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+    }
+    .page-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: var(--gray-50);
+    }
+    .page-dots {
+      color: var(--gray-500);
+      font-weight: 600;
+    }
+    .total-text {
+      color: var(--gray-600);
+    }
+
     /* ===== Empty State ===== */
     .empty-state {
       text-align: center;
@@ -551,9 +626,9 @@ export class CourseListComponent implements OnInit {
       const catId = params['cat'] ? Number(params['cat']) : undefined;
 
       if (catId) {
-        const rawCat = this.dataService.categoriesRaw().find(c => c.maTheLoai === catId);
+        const rawCat = this.dataService.categoriesRaw().find(c => c.maTheLoai === catId || (c as any).MaTheLoai === catId);
         if (rawCat) {
-          this.selectedCategory = rawCat.ten;
+          this.selectedCategory = rawCat.ten || (rawCat as any).Ten || (rawCat as any).name || (rawCat as any).TenTheLoai;
         }
       } else {
         this.selectedCategory = params['category'] || 'Tất cả';
@@ -582,13 +657,16 @@ export class CourseListComponent implements OnInit {
   onFilterChange() {
     // If category changed, re-fetch from API
     if (this.selectedCategory !== 'Tất cả') {
-      const rawCat = this.dataService.categoriesRaw().find(c => c.ten === this.selectedCategory);
+      const rawCat = this.dataService.categoriesRaw().find(c => {
+         const catName = c.ten || (c as any).Ten || (c as any).name || (c as any).TenTheLoai;
+         return catName === this.selectedCategory;
+      });
       if (rawCat) {
         this.router.navigate([], {
           relativeTo: this.route,
           queryParams: {
             q: this.searchQuery.trim() || null,
-            cat: rawCat.maTheLoai
+            cat: rawCat.maTheLoai || (rawCat as any).MaTheLoai
           },
           queryParamsHandling: 'merge'
         });
@@ -678,8 +756,11 @@ export class CourseListComponent implements OnInit {
   searchCourses() {
     let categoryId: number | undefined = undefined;
     if (this.selectedCategory !== 'Tất cả') {
-      const rawCat = this.dataService.categoriesRaw().find(c => c.ten === this.selectedCategory);
-      categoryId = rawCat?.maTheLoai;
+      const rawCat = this.dataService.categoriesRaw().find(c => {
+         const catName = c.ten || (c as any).Ten || (c as any).name || (c as any).TenTheLoai;
+         return catName === this.selectedCategory;
+      });
+      categoryId = rawCat?.maTheLoai || (rawCat as any)?.MaTheLoai;
     }
 
     this.router.navigate([], {
@@ -776,5 +857,50 @@ export class CourseListComponent implements OnInit {
       'popular': 'popular',
     };
     return map[sort] || undefined;
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.dataService.coursesTotal() / 12);
+  }
+
+  get pages(): number[] {
+    const total = this.totalPages;
+    const current = this.dataService.currentCoursePage();
+    const result = [];
+    
+    let start = Math.max(1, current - 2);
+    let end = Math.min(total, current + 2);
+
+    if (current <= 3) end = Math.min(5, total);
+    if (current >= total - 2) start = Math.max(1, total - 4);
+
+    for (let i = start; i <= end; i++) {
+      result.push(i);
+    }
+    return result;
+  }
+
+  goToPage(page: number) {
+    if (page < 1 || page > this.totalPages || page === this.dataService.currentCoursePage()) return;
+    
+    // Scroll smoothly to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    let categoryId: number | undefined = undefined;
+    if (this.selectedCategory !== 'Tất cả') {
+      const rawCat = this.dataService.categoriesRaw().find(c => {
+         const catName = c.ten || (c as any).Ten || (c as any).name || (c as any).TenTheLoai;
+         return catName === this.selectedCategory;
+      });
+      categoryId = rawCat?.maTheLoai || (rawCat as any)?.MaTheLoai;
+    }
+
+    this.dataService.loadCourses({
+      search: this.searchQuery || undefined,
+      categoryId: categoryId,
+      sortBy: this.mapSortToApi(this.selectedSort),
+      page: page,
+      append: false
+    });
   }
 }

@@ -40,10 +40,21 @@ import Swal from 'sweetalert2';
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      border-radius: 20px;
+      background: white;
+      border: 1px solid #f1f5f9;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      height: 100%;
+    }
+    .course-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+      border-color: #e2e8f0;
     }
     .card-image {
-      height: 160px;
-      background: var(--primary-bg);
+      height: 180px;
+      background: #f8fafc;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -51,68 +62,97 @@ import Swal from 'sweetalert2';
       overflow: hidden;
     }
     .card-image.dark-variant {
-      background: rgba(91, 99, 211, 0.15);
+      background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
     }
-    .card-emoji {
-      font-size: 64px;
+    .card-image img { 
+      transition: transform 0.5s ease; 
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
+    .course-card:hover .card-image img { transform: scale(1.05); }
+    
+    .card-emoji { font-size: 64px; }
     .ai-badge {
       position: absolute;
-      bottom: 10px;
-      left: 10px;
+      top: 12px;
+      left: 12px;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      color: #eb4899;
+      padding: 6px 12px;
+      border-radius: 100px;
       font-size: 11px;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      z-index: 2;
     }
     .card-body {
-      padding: 14px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       flex: 1;
     }
     .card-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--gray-800);
-      margin-bottom: 4px;
-      line-height: 1.3;
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     .card-instructor {
       font-size: 13px;
-      color: var(--gray-500);
-      margin-bottom: 6px;
+      color: #64748b;
+      margin-bottom: 12px;
+      font-weight: 500;
     }
     .card-rating {
       display: flex;
       align-items: center;
       gap: 6px;
-      margin-bottom: 8px;
+      margin-bottom: 16px;
     }
-    .stars {
-      color: var(--orange);
-      font-size: 12px;
-    }
-    .rating-text {
-      font-size: 12px;
-      color: var(--gray-500);
-    }
+    .stars { color: #f59e0b; font-size: 13px; letter-spacing: 2px;}
+    .rating-text { font-size: 13px; color: #64748b; font-weight: 600;}
+    
     .card-price {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px solid #f1f5f9;
     }
     .price {
-      font-size: 17px;
+      font-size: 18px;
       font-weight: 800;
-      color: var(--primary);
+      color: #4f46e5;
     }
     .original-price {
-      font-size: 13px;
-      color: var(--gray-400);
+      font-size: 14px;
+      color: #94a3b8;
       text-decoration: line-through;
     }
     .cart-btn {
-      margin-top: 10px;
+      margin-top: 16px;
       width: 100%;
+      border-radius: 12px;
+      padding: 10px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #4f46e5;
+      border: none;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .cart-btn:hover {
+      background: #4f46e5;
+      color: white;
     }
   `]
 })

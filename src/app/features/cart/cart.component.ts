@@ -74,17 +74,17 @@ import Swal from 'sweetalert2';
             </div>
 
             <button class="btn btn-primary btn-lg" style="width:100%" (click)="checkout()" [disabled]="checkoutLoading">
-               <ng-container *ngIf="!checkoutLoading">🔒 Thanh toán ngay →</ng-container>
-               <ng-container *ngIf="checkoutLoading">⏳ Đang xử lý...</ng-container>
+               <ng-container *ngIf="!checkoutLoading"><i class="fa-solid fa-lock"></i> Thanh toán ngay <i class="fa-solid fa-arrow-right"></i></ng-container>
+               <ng-container *ngIf="checkoutLoading"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...</ng-container>
             </button>
-            <p class="security-note">🔒 Bảo mật SSL • Hoàn tiền 30 ngày</p>
+            <p class="security-note"><i class="fa-solid fa-shield-halved"></i> Bảo mật SSL • Hoàn tiền 30 ngày</p>
             <div class="payment-methods">
               <span>Chấp nhận thanh toán:</span>
               <div class="methods">
                 <span class="method"><i class="fa-solid fa-credit-card"></i> Thẻ</span>
-                <span class="method">📱 MoMo</span>
-                <span class="method">🏦 VNPay</span>
-                <span class="method"><i class="fa-solid fa-coins"></i> Zalo</span>
+                <span class="method"><i class="fa-solid fa-mobile-screen"></i> MoMo</span>
+                <span class="method"><i class="fa-solid fa-building-columns"></i> VNPay</span>
+                <span class="method"><i class="fa-solid fa-wallet"></i> ZaloPay</span>
               </div>
             </div>
           </div>

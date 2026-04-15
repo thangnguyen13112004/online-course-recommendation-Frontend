@@ -3,25 +3,26 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminLayoutComponent } from '../../../layouts/admin-layout/admin-layout.component';
 import { ApiService } from '../../../core/services/api.service';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-admin-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule, AdminLayoutComponent],
+  imports: [CommonModule, FormsModule, AdminLayoutComponent, PaginationComponent],
   template: `
     <app-admin-layout>
       <!-- Page Header -->
       <div class="page-header">
         <div class="page-header-left">
-          <h1>Danh mục khóa học</h1>
+          <h1>Thể loại khóa học</h1>
           <p class="page-subtitle">
             <i class="fa-regular fa-clock"></i>
-            Quản lý {{ categories.length }} danh mục • <span class="live-dot"></span> Đang hoạt động
+            Quản lý {{ categories.length }} thể loại • <span class="live-dot"></span> Đang hoạt động
           </p>
         </div>
         <div class="page-header-right">
           <button class="header-action-btn primary" (click)="openAddModal()">
-            <i class="fa-solid fa-plus"></i> Thêm danh mục mới
+            <i class="fa-solid fa-plus"></i> Thêm thể loại mới
           </button>
         </div>
       </div>
@@ -32,7 +33,7 @@ import { ApiService } from '../../../core/services/api.service';
           <div class="mini-stat-icon blue"><i class="fa-solid fa-folder-open"></i></div>
           <div class="mini-stat-content">
             <span class="mini-stat-value">{{ categories.length }}</span>
-            <span class="mini-stat-label">Tổng danh mục</span>
+            <span class="mini-stat-label">Tổng thể loại</span>
           </div>
         </div>
         <div class="mini-stat">
@@ -52,7 +53,7 @@ import { ApiService } from '../../../core/services/api.service';
 
       <div class="category-grid" *ngIf="!isLoading">
         <div *ngIf="categories.length === 0" style="grid-column: 1/-1; padding: 60px; text-align: center; background: var(--white); border-radius: 16px; border: 1px dashed var(--gray-300); color: var(--gray-400);">
-          Chưa có danh mục nào được tìm thấy.
+          Chưa có thể loại nào được tìm thấy.
         </div>
         <div *ngFor="let cat of categories; let i = index"
              class="category-card"
@@ -78,13 +79,22 @@ import { ApiService } from '../../../core/services/api.service';
         </div>
       </div>
 
+      <!-- Pagination -->
+      <app-pagination 
+        *ngIf="!isLoading"
+        [currentPage]="currentCategoriesPage"
+        [totalItems]="totalCategories"
+        [pageSize]="12"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
+
       <!-- Add/Edit Category Modal -->
       <div class="modal-overlay" *ngIf="showAddModal" (click)="showAddModal = false">
         <div class="modal-card" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h2>
               <i [class]="editingCatId ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-wand-magic-sparkles'"></i>
-              {{ editingCatId ? 'Chỉnh sửa danh mục' : 'Tạo danh mục mới' }}
+              {{ editingCatId ? 'Chỉnh sửa thể loại' : 'Tạo thể loại mới' }}
             </h2>
             <button class="modal-close" (click)="showAddModal = false">
               <i class="fa-solid fa-times"></i>
@@ -95,13 +105,13 @@ import { ApiService } from '../../../core/services/api.service';
               <!-- Form Section -->
               <div class="modal-fields">
                 <div class="form-group">
-                  <label>Tên danh mục</label>
+                  <label>Tên thể loại</label>
                   <input type="text" class="form-input" placeholder="Ví dụ: Thiết kế đồ họa..." [(ngModel)]="newCatName">
                 </div>
                 
                 <div class="form-group">
                   <label>Mô tả ngắn</label>
-                  <textarea class="form-input" placeholder="Tóm tắt về danh mục này..." [(ngModel)]="newCatDesc"></textarea>
+                  <textarea class="form-input" placeholder="Tóm tắt về thể loại này..." [(ngModel)]="newCatDesc"></textarea>
                 </div>
 
                 <!-- Icon Picker -->
@@ -143,7 +153,7 @@ import { ApiService } from '../../../core/services/api.service';
                     </div>
                   </div>
                   <div class="cat-card-body">
-                    <h3>{{ newCatName || 'Tên danh mục' }}</h3>
+                    <h3>{{ newCatName || 'Tên thể loại' }}</h3>
                     <p class="cat-description">{{ newCatDesc || 'Mô tả tóm tắt...' }}</p>
                   </div>
                 </div>
@@ -171,7 +181,7 @@ import { ApiService } from '../../../core/services/api.service';
           </div>
           <div class="modal-body" style="text-align: center; padding: 32px;">
             <p style="font-size: 16px; margin-bottom: 8px;">
-              Bạn có chắc muốn xóa danh mục <strong>"{{ deletingCat?.name }}"</strong>?
+              Bạn có chắc muốn xóa thể loại <strong>"{{ deletingCat?.name }}"</strong>?
             </p>
             <p style="color: var(--gray-400); font-size: 13px;">Hành động này không thể hoàn tác.</p>
           </div>
@@ -179,7 +189,7 @@ import { ApiService } from '../../../core/services/api.service';
             <button class="modal-btn cancel" (click)="showDeleteModal = false">Hủy</button>
             <button class="modal-btn delete-btn" (click)="deleteCategory()" [disabled]="isSaving">
               <i [class]="isSaving ? 'fa-solid fa-circle-notch fa-spin' : 'fa-solid fa-trash'"></i>
-              {{ isSaving ? 'Đang xóa...' : 'Xóa danh mục' }}
+              {{ isSaving ? 'Đang xóa...' : 'Xóa thể loại' }}
             </button>
           </div>
         </div>
@@ -289,8 +299,10 @@ import { ApiService } from '../../../core/services/api.service';
 })
 export class AdminCategoriesComponent implements OnInit {
   private api = inject(ApiService);
-  
+
   categories: any[] = [];
+  totalCategories = 0;
+  currentCategoriesPage = 1;
   isLoading = false;
   isSaving = false;
   showAddModal = false;
@@ -332,20 +344,23 @@ export class AdminCategoriesComponent implements OnInit {
     this.loadCategories();
   }
 
-  loadCategories() {
+  loadCategories(page = 1) {
     this.isLoading = true;
-    this.api.getCategories().subscribe({
+    this.api.getCategories(page, 12).subscribe({
       next: (res) => {
+        // Hỗ trợ cả response dạng mảng (nếu backend chưa restart) và dạng object phân trang
         const raw = Array.isArray(res) ? res : (res.data || []);
+        this.totalCategories = res.totalCount || raw.length;
+        this.currentCategoriesPage = res.page || page;
+        
         this.categories = raw.map((c: any, i: number) => {
-          let desc = c.moTa || c.MoTa || 'Danh mục khóa học trên hệ thống';
+          let desc = c.moTa || c.MoTa || 'Thể loại khóa học trên hệ thống';
           let icon = this.iconPresets[i % this.iconPresets.length].class;
           let gradient = this.colorPresets[i % this.colorPresets.length].value;
 
-          // Parse metadata if exists
           if (desc.includes('||')) {
             const parts = desc.split('||').map((p: string) => p.trim());
-            desc = parts[0] || 'Danh mục khóa học trên hệ thống';
+            desc = parts[0] || 'Thể loại khóa học trên hệ thống';
             parts.slice(1).forEach((p: string) => {
               if (p.startsWith('icon:')) icon = p.replace('icon:', '');
               if (p.startsWith('color:')) gradient = p.replace('color:', '');
@@ -359,13 +374,17 @@ export class AdminCategoriesComponent implements OnInit {
             courseCount: c.soKhoaHoc ?? c.SoKhoaHoc ?? 0,
             gradient: gradient,
             icon: icon,
-            rawMoTa: c.moTa || c.MoTa // keep original for testing/debugging
+            rawMoTa: c.moTa || c.MoTa
           };
         });
         this.isLoading = false;
       },
       error: () => this.isLoading = false
     });
+  }
+
+  onPageChange(page: number) {
+    this.loadCategories(page);
   }
 
   openAddModal() {
@@ -388,32 +407,32 @@ export class AdminCategoriesComponent implements OnInit {
 
   saveCategory() {
     if (!this.newCatName.trim()) {
-      this.showToast('Vui lòng nhập tên danh mục', 'error');
+      this.showToast('Vui lòng nhập tên thể loại', 'error');
       return;
     }
 
     this.isSaving = true;
-    
+
     // Encode icon and color into description
-    const descText = this.newCatDesc.trim() || 'Danh mục khóa học trên hệ thống';
+    const descText = this.newCatDesc.trim() || 'Thể loại khóa học trên hệ thống';
     const metaStr = ` || icon:${this.selectedIcon} || color:${this.selectedGradient}`;
-    
-    const data = { 
-      ten: this.newCatName.trim(), 
-      moTa: descText + metaStr 
+
+    const data = {
+      ten: this.newCatName.trim(),
+      moTa: descText + metaStr
     };
 
     if (this.editingCatId) {
       // Cập nhật
       this.api.updateCategory(this.editingCatId, data).subscribe({
         next: (res) => {
-          this.showToast(res.message || 'Cập nhật danh mục thành công!');
+          this.showToast(res.message || 'Cập nhật thể loại thành công!');
           this.showAddModal = false;
           this.isSaving = false;
           this.loadCategories();
         },
         error: (err) => {
-          this.showToast(err.error?.message || 'Lỗi khi cập nhật danh mục', 'error');
+          this.showToast(err.error?.message || 'Lỗi khi cập nhật thể loại', 'error');
           this.isSaving = false;
         }
       });
@@ -421,13 +440,13 @@ export class AdminCategoriesComponent implements OnInit {
       // Tạo mới
       this.api.createCategory(data).subscribe({
         next: (res) => {
-          this.showToast(res.message || 'Tạo danh mục thành công!');
+          this.showToast(res.message || 'Tạo thể loại thành công!');
           this.showAddModal = false;
           this.isSaving = false;
           this.loadCategories();
         },
         error: (err) => {
-          this.showToast(err.error?.message || 'Lỗi khi tạo danh mục', 'error');
+          this.showToast(err.error?.message || 'Lỗi khi tạo thể loại', 'error');
           this.isSaving = false;
         }
       });
@@ -445,14 +464,14 @@ export class AdminCategoriesComponent implements OnInit {
 
     this.api.deleteCategory(this.deletingCat.id).subscribe({
       next: (res) => {
-        this.showToast(res.message || 'Đã xóa danh mục thành công!');
+        this.showToast(res.message || 'Đã xóa thể loại thành công!');
         this.showDeleteModal = false;
         this.isSaving = false;
         this.deletingCat = null;
         this.loadCategories();
       },
       error: (err) => {
-        this.showToast(err.error?.message || 'Lỗi khi xóa danh mục', 'error');
+        this.showToast(err.error?.message || 'Lỗi khi xóa thể loại', 'error');
         this.isSaving = false;
       }
     });

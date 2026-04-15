@@ -82,12 +82,15 @@ import { AuthService } from '../../core/services/auth.service';
       </section>
 
       <!-- Current Courses -->
-      <section class="section" *ngIf="dataService.enrolledCourses().length > 0">
-        <div class="section-header">
+      <section class="section" *ngIf="ongoingCourses.length > 0">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
           <h2><i class="fa-solid fa-play-circle"></i> Tiếp tục học tập</h2>
+          <button *ngIf="ongoingCourses.length > 2" class="btn btn-outline btn-sm" style="border:none; color: var(--primary); font-weight: 600;" (click)="showAllOngoing = !showAllOngoing">
+            {{ showAllOngoing ? 'Ẩn bớt ▴' : 'Xem tất cả (' + ongoingCourses.length + ') ▾' }}
+          </button>
         </div>
         <div class="enrolled-grid">
-          <div *ngFor="let ec of dataService.enrolledCourses()" class="enrolled-card card">
+          <div *ngFor="let ec of (showAllOngoing ? ongoingCourses : ongoingCourses.slice(0, 2))" class="enrolled-card card">
             <div class="ec-icon">
               <img *ngIf="ec.course?.image && ec.course!.image!.length > 5" [src]="ec.course?.image" (error)="ec.course!.image = ''" alt="course" style="width: 100%; height: 100%; object-fit: cover;">
               <div *ngIf="!ec.course?.image || ec.course!.image!.length <= 5" style="font-size: 32px; display:flex; justify-content:center; align-items:center; width:100%; height:100%"><i class="fa-solid fa-box"></i></div>
@@ -99,6 +102,31 @@ import { AuthService } from '../../core/services/auth.service';
               <div class="progress-bar"><div class="fill" [style.width.%]="ec.progress"></div></div>
             </div>
             <a [routerLink]="['/learn', ec.course?.id || 'course', 'lesson', 1]" class="btn btn-primary btn-sm">► Tiếp tục</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Completed Courses -->
+      <section class="section" *ngIf="completedCourses.length > 0">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h2><i class="fa-solid fa-circle-check" style="color: #10B981;"></i> Đã hoàn thành</h2>
+          <button *ngIf="completedCourses.length > 2" class="btn btn-outline btn-sm" style="border:none; color: #10B981; font-weight: 600;" (click)="showAllCompleted = !showAllCompleted">
+            {{ showAllCompleted ? 'Ẩn bớt ▴' : 'Xem tất cả (' + completedCourses.length + ') ▾' }}
+          </button>
+        </div>
+        <div class="enrolled-grid">
+          <div *ngFor="let ec of (showAllCompleted ? completedCourses : completedCourses.slice(0, 2))" class="enrolled-card card">
+            <div class="ec-icon">
+              <img *ngIf="ec.course?.image && ec.course!.image!.length > 5" [src]="ec.course?.image" (error)="ec.course!.image = ''" alt="course" style="width: 100%; height: 100%; object-fit: cover;">
+              <div *ngIf="!ec.course?.image || ec.course!.image!.length <= 5" style="font-size: 32px; display:flex; justify-content:center; align-items:center; width:100%; height:100%"><i class="fa-solid fa-box"></i></div>
+            </div>
+            <div class="ec-info">
+              <h3>{{ ec.course?.title }}</h3>
+              <p>{{ ec.course?.instructor }} • {{ ec.course?.modules }} chương</p>
+              <span class="progress-text" style="color: #10B981; font-weight: 600;"><i class="fa-solid fa-check"></i> Hoàn thành 100%</span>
+              <div class="progress-bar"><div class="fill" style="width: 100%; background: linear-gradient(90deg, #10B981, #059669);"></div></div>
+            </div>
+            <a [routerLink]="['/course', ec.course?.id]" class="btn btn-outline btn-sm">Xem lại</a>
           </div>
         </div>
       </section>
@@ -328,8 +356,19 @@ export class DashboardComponent implements OnInit {
   public dataService = inject(DataService);
   private authService = inject(AuthService);
 
+  showAllOngoing = false;
+  showAllCompleted = false;
+
+  get completedCourses() {
+    return this.dataService.enrolledCourses().filter(c => c.progress === 100);
+  }
+
   get completedCoursesCount() {
-    return this.dataService.enrolledCourses().filter(c => c.progress === 100).length;
+    return this.completedCourses.length;
+  }
+
+  get ongoingCourses() {
+    return this.dataService.enrolledCourses().filter(c => (c.progress || 0) < 100);
   }
 
   ngOnInit() {

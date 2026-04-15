@@ -2,11 +2,12 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { AdminLayoutComponent } from '../../../layouts/admin-layout/admin-layout.component';
 import { ApiService } from '../../../core/services/api.service';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-admin-approvals',
   standalone: true,
-  imports: [CommonModule, AdminLayoutComponent],
+  imports: [CommonModule, AdminLayoutComponent, PaginationComponent],
   template: `
     <app-admin-layout>
       <h1><i class="fa-solid fa-clipboard-list"></i> Duyệt nội dung khóa học</h1>
@@ -81,6 +82,15 @@ import { ApiService } from '../../../core/services/api.service';
           </div>
         </div>
       </div>
+
+      <!-- Pagination -->
+      <app-pagination 
+        *ngIf="!isLoading && totalCourses > 0"
+        [currentPage]="currentPage"
+        [totalItems]="totalCourses"
+        [pageSize]="10"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
 
       <!-- Toast -->
       <div class="toast" *ngIf="toastMessage" [class.error]="toastType === 'error'" (click)="toastMessage = ''">
@@ -171,6 +181,7 @@ export class AdminApprovalsComponent implements OnInit {
   rejectedCount = 0;
   isLoading = false;
   activeTab = 'all';
+  currentPage = 1;
 
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
@@ -181,11 +192,13 @@ export class AdminApprovalsComponent implements OnInit {
 
   switchTab(tab: string) {
     this.activeTab = tab;
+    this.currentPage = 1;
     this.loadCourses();
   }
 
-  loadCourses() {
+  loadCourses(page = 1) {
     this.isLoading = true;
+    this.currentPage = page;
     const statusMap: Record<string, string> = {
       'all': '',
       'published': 'Published',
@@ -194,12 +207,12 @@ export class AdminApprovalsComponent implements OnInit {
     };
 
     this.api.getAdminCourses({ 
-      page: 1, 
-      pageSize: 20,
+      page: page, 
+      pageSize: 10,
       status: statusMap[this.activeTab] || undefined
     }).subscribe({
       next: (res) => {
-        const data = res.data || [];
+        const data = Array.isArray(res) ? res : (res.data || []);
         this.totalCourses = res.totalCount || data.length;
         this.courses = data.map((c: any) => ({
           id: c.maKhoaHoc,
@@ -220,9 +233,9 @@ export class AdminApprovalsComponent implements OnInit {
       error: () => {
         this.isLoading = false;
         // Fallback: nếu admin/all chưa deploy, dùng public endpoint
-        this.api.getCourses({ page: 1, pageSize: 20 }).subscribe({
+        this.api.getCourses({ page: page, pageSize: 10 }).subscribe({
           next: (res) => {
-            const data = res.data || [];
+            const data = Array.isArray(res) ? res : (res.data || []);
             this.totalCourses = res.totalCount || data.length;
             this.courses = data.map((c: any) => ({
               id: c.maKhoaHoc,
@@ -248,6 +261,10 @@ export class AdminApprovalsComponent implements OnInit {
       next: (res) => this.rejectedCount = res.totalCount || 0,
       error: () => {}
     });
+  }
+
+  onPageChange(page: number) {
+    this.loadCourses(page);
   }
 
   updateStatus(course: any, newStatus: string) {
