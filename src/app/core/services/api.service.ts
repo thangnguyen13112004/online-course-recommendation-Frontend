@@ -45,7 +45,11 @@ export class ApiService {
   }
 
   deleteCourse(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/courses/${id}`);
+    return this.http.delete(`${this.apiUrl}/instructor/courses/${id}`);
+  }
+
+  submitCourseForReview(id: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/instructor/courses/${id}/submit`, {});
   }
 
   getCourseReviews(courseId: number, page = 1, pageSize = 10): Observable<any> {
@@ -177,6 +181,7 @@ export class ApiService {
   // ========================
   // PROMOTIONS (Admin)
   // ========================
+
   getPromotions(page = 1, pageSize = 10, search?: string): Observable<any> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (search) params = params.set('search', search);

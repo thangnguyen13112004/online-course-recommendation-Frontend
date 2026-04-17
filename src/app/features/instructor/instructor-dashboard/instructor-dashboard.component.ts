@@ -4,6 +4,7 @@ import { RouterLink, Router } from '@angular/router';
 import { InstructorLayoutComponent } from '../../../layouts/instructor-layout/instructor-layout.component';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-instructor-dashboard',
@@ -73,8 +74,8 @@ import { AuthService } from '../../../core/services/auth.service';
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let course of courses">
-                  <td>
+                <tr *ngFor="let course of courses" class="course-row">
+                  <td class="course-info-cell" (click)="editCourse(course.maKhoaHoc || course.id)">
                     <div style="display: flex; align-items: center; gap: 12px;">
                       <div class="course-thumb" [style.background-image]="course.anhUrl ? 'url(' + course.anhUrl + ')' : ''" [class.no-img]="!course.anhUrl">
                         <i class="fa-solid fa-image" *ngIf="!course.anhUrl"></i>
@@ -85,19 +86,39 @@ import { AuthService } from '../../../core/services/auth.service';
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td (click)="editCourse(course.maKhoaHoc || course.id)" style="cursor: pointer;">
                     <span class="badge" [ngClass]="getStatusClass(course.tinhTrang)">
                       {{ getStatusLabel(course.tinhTrang) }}
                     </span>
                   </td>
-                  <td>{{ course.soHocVien | number }}</td>
-                  <td>{{ (course.giaGoc) ? (course.giaGoc | currency:'VND':'symbol':'1.0-0') : 'Miễn phí' }}</td>
-                  <td><i class="fa-solid fa-star" style="color: #fccc29;"></i> {{ course.tbdanhGia | number:'1.1-1' }}</td>
-                  <td>
-                    <button class="btn btn-outline btn-sm" (click)="editCourse(course.maKhoaHoc || course.id)">
-                      <i class="fa-solid fa-pen-to-square"></i> Sửa
-                    </button>
-                    <button class="icon-action" title="Xem báo cáo chi tiết" (click)="viewReports()">📊</button>
+                  <td (click)="editCourse(course.maKhoaHoc || course.id)" style="cursor: pointer;">{{ course.soHocVien | number }}</td>
+                  <td (click)="editCourse(course.maKhoaHoc || course.id)" style="cursor: pointer;">{{ (course.giaGoc) ? (course.giaGoc | currency:'VND':'symbol':'1.0-0') : 'Miễn phí' }}</td>
+                  <td (click)="editCourse(course.maKhoaHoc || course.id)" style="cursor: pointer;"><i class="fa-solid fa-star" style="color: #fccc29;"></i> {{ course.tbdanhGia | number:'1.1-1' }}</td>
+                  <td class="actions-cell">
+                    <div class="action-slot">
+                      <button class="icon-action info" title="Xem báo cáo chi tiết" (click)="viewReports()">
+                        <i class="fa-solid fa-chart-simple"></i>
+                      </button>
+                    </div>
+
+                    <div class="action-slot submit-slot">
+                      <button *ngIf="course.tinhTrang === 'Draft' || course.tinhTrang === 'Rejected'" 
+                              class="btn btn-primary btn-sm submit-btn" 
+                              (click)="submitForReview(course)"
+                              [disabled]="course._submitting">
+                        <i [class]="course._submitting ? 'fa-solid fa-circle-notch fa-spin' : 'fa-solid fa-paper-plane'"></i> Gửi duyệt
+                      </button>
+                    </div>
+                    
+                    <div class="action-slot">
+                      <button *ngIf="course.tinhTrang !== 'Published'" 
+                              class="icon-action danger" 
+                              title="Xóa khóa học" 
+                              (click)="deleteCourse(course)">
+                        <i class="fa-solid fa-trash" *ngIf="!course._deleting"></i>
+                        <i class="fa-solid fa-circle-notch fa-spin" *ngIf="course._deleting"></i>
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 <tr *ngIf="courses.length === 0">
@@ -165,8 +186,28 @@ import { AuthService } from '../../../core/services/auth.service';
     .course-thumb { width: 48px; height: 36px; border-radius: 6px; background-size: cover; background-position: center; border: 1px solid var(--gray-200); }
     .course-thumb.no-img { background: var(--gray-100); display: flex; align-items: center; justify-content: center; color: var(--gray-300); }
 
-    .icon-action { background: none; font-size: 16px; padding: 4px 8px; cursor: pointer; border: none; }
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+    
+    .actions-cell { display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .action-slot { width: 36px; display: flex; justify-content: center; }
+    .submit-slot { width: 110px; }
+    .submit-btn { white-space: nowrap; height: 32px; display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center; }
+
+    .icon-action { 
+      width: 32px; height: 32px; 
+      display: flex; align-items: center; justify-content: center;
+      background: var(--gray-100); color: var(--gray-600);
+      border-radius: 8px; cursor: pointer; border: none;
+      transition: all 0.2s ease;
+    }
+    .icon-action:hover { transform: translateY(-2px); }
+    .icon-action.info:hover { background: rgba(13, 110, 253, 0.1); color: #0d6efd; }
+    .icon-action.danger { color: #dc3545; }
+    .icon-action.danger:hover { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+
+    .course-info-cell { cursor: pointer; transition: all 0.2s ease; }
+    .course-row:hover td:not(:last-child) { background: var(--gray-50) !important; }
+    .course-row:hover strong { color: var(--primary); text-decoration: underline; }
 
     .chart-area { display: flex; gap: 20px; }
     .chart-bars {
@@ -271,11 +312,79 @@ export class InstructorDashboardComponent implements OnInit {
   }
 
   editCourse(id: number) {
-    if (!id) return;
     this.router.navigate(['/instructor/courses/edit', id]);
   }
 
+  submitForReview(course: any) {
+    Swal.fire({
+      title: 'Xác nhận gửi duyệt?',
+      text: "Khóa học sẽ được gửi cho quản trị viên xem xét. Bạn sẽ không thể chỉnh sửa trong khi chờ duyệt.",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#5B63D3',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Đúng, gửi duyệt!',
+      cancelButtonText: 'Hủy'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        course._submitting = true;
+        this.api.submitCourseForReview(course.maKhoaHoc || course.id).subscribe({
+          next: (res) => {
+            Swal.fire('Thành công', res.message, 'success');
+            course.tinhTrang = 'Pending';
+            course._submitting = false;
+          },
+          error: (err) => {
+            console.error('Submission error:', err);
+            let msg = 'Có lỗi xảy ra khi gửi duyệt.';
+            if (err.error?.message) msg = err.error.message;
+            else if (typeof err.error === 'string') msg = err.error;
+            else if (err.message) msg = err.message;
+
+            Swal.fire('Thất bại', msg, 'error');
+            course._submitting = false;
+          }
+        });
+      }
+    });
+  }
   viewReports() {
     this.router.navigate(['/instructor/reports']);
+  }
+
+  deleteCourse(course: any) {
+    const id = course.maKhoaHoc || course.id;
+    if (!id) return;
+
+    Swal.fire({
+      title: 'Xóa khóa học?',
+      text: `Bạn có chắc chắn muốn xóa khóa học "${course.tieuDe}" không? Thao tác này không thể hoàn tác.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6e7881',
+      confirmButtonText: 'Đồng ý xóa',
+      cancelButtonText: 'Hủy'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        course._deleting = true;
+        this.api.deleteCourse(id).subscribe({
+          next: () => {
+            Swal.fire({
+              title: 'Đã xóa!',
+              text: 'Khóa học của bạn đã được gỡ bỏ.',
+              icon: 'success',
+              confirmButtonColor: '#FF7B54'
+            });
+            this.courses = this.courses.filter(c => (c.maKhoaHoc || c.id) !== id);
+            this.draftCount = this.courses.filter(c => c.tinhTrang === 'Draft').length;
+          },
+          error: (err) => {
+            course._deleting = false;
+            Swal.fire('Lỗi', err.error?.message || 'Không thể xóa khóa học lúc này.', 'error');
+          }
+        });
+      }
+    });
   }
 }
