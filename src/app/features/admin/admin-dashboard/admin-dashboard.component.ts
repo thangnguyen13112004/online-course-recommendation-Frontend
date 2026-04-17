@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { AdminLayoutComponent } from '../../../layouts/admin-layout/admin-layout.component';
 import { ApiService } from '../../../core/services/api.service';
 
@@ -58,10 +59,10 @@ import { ApiService } from '../../../core/services/api.service';
               </div>
               <div>
                 <h2>Khóa học chờ duyệt</h2>
-                <span class="card-title-count">{{ pendingCourses.length }} yêu cầu</span>
+                <span class="card-title-count">{{ totalPendingCount }} yêu cầu</span>
               </div>
             </div>
-            <a class="see-all-link">
+            <a class="see-all-link" (click)="goToApprovals()">
               Xem tất cả <i class="fa-solid fa-arrow-right"></i>
             </a>
           </div>
@@ -655,6 +656,7 @@ import { ApiService } from '../../../core/services/api.service';
 })
 export class AdminDashboardComponent implements OnInit {
   private api = inject(ApiService);
+  private router = inject(Router);
 
   statsCards: any[] = [
     {
@@ -684,6 +686,7 @@ export class AdminDashboardComponent implements OnInit {
   ];
 
   pendingCourses: any[] = [];
+  totalPendingCount = 0;
   newInstructors: any[] = [];
 
   ngOnInit() {
@@ -718,14 +721,15 @@ export class AdminDashboardComponent implements OnInit {
   toastType: 'success' | 'error' = 'success';
 
   loadPendingCourses() {
-    this.api.getCourses({ page: 1, pageSize: 5, sortBy: 'newest' }).subscribe(res => {
+    this.api.getAdminCourses({ page: 1, pageSize: 5, status: 'Pending' }).subscribe(res => {
+      this.totalPendingCount = res.totalCount || 0;
       const data = res.data || [];
       this.pendingCourses = data.map((c: any) => ({
         id: c.maKhoaHoc,
         name: c.tieuDe,
         instructor: c.giangVien?.[0]?.ten || 'Admin',
         category: c.theLoai?.ten || 'N/A',
-        price: c.giaGoc ? c.giaGoc.toLocaleString('vi-VN') + 'đ' : 'Miễn phí',
+        price: (c.giaGoc || 0).toLocaleString('vi-VN') + 'đ',
         date: c.ngayTao ? new Date(c.ngayTao).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
         _saving: false
       }));
@@ -788,5 +792,9 @@ export class AdminDashboardComponent implements OnInit {
     this.toastMessage = message;
     this.toastType = type;
     setTimeout(() => this.toastMessage = '', 4000);
+  }
+
+  goToApprovals() {
+    this.router.navigate(['/admin/courses/approvals']);
   }
 }

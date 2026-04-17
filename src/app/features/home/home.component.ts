@@ -9,7 +9,7 @@ import { DataService } from '../../core/services/data.service';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, HeaderComponent, CourseCardComponent],
+  imports: [CommonModule, FormsModule, HeaderComponent, CourseCardComponent],
   template: `
     <app-header />
 
