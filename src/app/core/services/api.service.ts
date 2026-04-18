@@ -177,6 +177,10 @@ export class ApiService {
   // ========================
   // PROMOTIONS (Admin)
   // ========================
+  applyPromotion(id: number, data: { courseIds: number[], categoryIds: number[] }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/promotions/${id}/apply`, data);
+  }
+  
   getPromotions(page = 1, pageSize = 10, search?: string): Observable<any> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (search) params = params.set('search', search);
@@ -258,12 +262,12 @@ export class ApiService {
     return this.http.get(`${this.apiUrl}/recommendation/user-based/${userId}`);
   }
 
-  getSimilarCourses(courseId: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}/recommendation/content-based/similar-courses/${courseId}`);
+  getUserProfileRecommendations(userId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/recommendation/user-profile/${userId}`);
   }
 
-  getUserProfileRecommendations(userId: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}/recommendation/content-based/user-profile/${userId}`);
+  getSimilarCourses(courseId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/recommendation/similar-course/${courseId}`);
   }
 }
 

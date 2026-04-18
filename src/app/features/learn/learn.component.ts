@@ -74,15 +74,15 @@ import Swal from 'sweetalert2';
               <i class="fa-solid fa-file-lines" style="font-size: 48px; margin-bottom: 16px; color: var(--gray-500)"></i>
               <p>Bài học này không có video</p>
             </div>
-            
+
             <div class="reading-content" *ngIf="currentLesson?.lyThuyet || currentLesson?.baiTap" style="width: 100%; max-width: 800px; padding: 40px; background: white; color: var(--gray-800); border-radius: 8px; margin: 20px; overflow-y: auto; text-align: left; max-height: 90%;">
               <h2 style="font-size: 24px; margin-bottom: 20px; color: var(--text-dark);">{{ getLessonTitle(currentLesson) }}</h2>
-              
+
               <div *ngIf="currentLesson?.lyThuyet" style="margin-bottom: 30px;">
                 <h4 style="font-size: 16px; color: var(--primary); margin-bottom: 12px;"><i class="fa-solid fa-book"></i> Lý thuyết</h4>
                 <div [innerHTML]="formatContent(currentLesson.lyThuyet)" style="line-height: 1.8; font-size: 15px;"></div>
               </div>
-              
+
               <div *ngIf="currentLesson?.baiTap" style="padding: 20px; background: rgba(91,99,211,0.05); border-left: 4px solid var(--primary); border-radius: 4px;">
                 <h4 style="font-size: 16px; color: var(--primary); margin-bottom: 12px;"><i class="fa-solid fa-pen-to-square"></i> Bài tập</h4>
                 <div [innerHTML]="formatContent(currentLesson.baiTap)" style="line-height: 1.8; font-size: 15px;"></div>
@@ -395,7 +395,7 @@ export class LearnComponent implements OnInit {
   loading = true;
   errorMsg = '';
   panelTab: 'overview' | 'notes' = 'overview';
-  
+
   isVideoFinished = false;
   isExerciseCompleted = false;
 
