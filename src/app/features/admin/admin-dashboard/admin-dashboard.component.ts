@@ -215,7 +215,7 @@ import { ApiService } from '../../../core/services/api.service';
     }
 
     .header-action-btn.primary {
-      background: linear-gradient(135deg, #5B63D3 0%, #7B82E0 100%);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
       color: white;
       border: none;
     }
@@ -267,7 +267,7 @@ import { ApiService } from '../../../core/services/api.service';
       opacity: 1;
     }
 
-    .stat-blue::before { background: linear-gradient(90deg, #5B63D3, #7B82E0); }
+    .stat-blue::before { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
     .stat-green::before { background: linear-gradient(90deg, #28A745, #5BD67A); }
     .stat-orange::before { background: linear-gradient(90deg, #FD7E14, #FDAA5E); }
     .stat-purple::before { background: linear-gradient(90deg, #8B5CF6, #A78BFA); }
@@ -284,8 +284,8 @@ import { ApiService } from '../../../core/services/api.service';
     }
 
     .icon-blue {
-      background: linear-gradient(135deg, rgba(91, 99, 211, 0.12) 0%, rgba(123, 130, 224, 0.08) 100%);
-      color: #5B63D3;
+      background: rgba(234, 88, 12, 0.12);
+      color: var(--primary);
     }
 
     .icon-green {
@@ -385,8 +385,8 @@ import { ApiService } from '../../../core/services/api.service';
     }
 
     .card-title-icon.blue {
-      background: linear-gradient(135deg, rgba(91, 99, 211, 0.12) 0%, rgba(91, 99, 211, 0.06) 100%);
-      color: #5B63D3;
+      background: rgba(234, 88, 12, 0.12);
+      color: var(--primary);
     }
 
     .card-title-icon.green {
@@ -676,12 +676,20 @@ export class AdminDashboardComponent implements OnInit {
       theme: 'green'
     },
     {
-      label: 'Khóa học',
+      label: 'Kiến thức (Khóa học)',
       value: '...',
       trend: 'Đang tải',
       trendUp: true,
       icon: 'fa-solid fa-book-open',
       theme: 'orange'
+    },
+    {
+      label: 'Doanh thu phí sàn (30%)',
+      value: '...',
+      trend: 'Cập nhật mới',
+      trendUp: true,
+      icon: 'fa-solid fa-vault',
+      theme: 'green'
     }
   ];
 
@@ -696,19 +704,24 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   loadStats() {
-    this.api.getUsers(1, 1).subscribe(res => {
-      this.statsCards[0].value = res.totalCount.toString();
+    this.api.getUserStats().subscribe((res: any) => {
+      this.statsCards[0].value = res.totalUsers?.toString() || '0';
       this.statsCards[0].trend = 'Cập nhật mới';
+      
+      this.statsCards[1].value = res.instructors?.toString() || '0';
+      this.statsCards[1].trend = 'Cập nhật mới';
+
+      // Format currency
+      const formatCurrencyM = (value: number) => {
+        if (value >= 1000000) return (value / 1000000).toFixed(2) + 'M đ';
+        if (value >= 1000) return (value / 1000).toFixed(0) + 'k đ';
+        return value.toString() + 'đ';
+      };
+
+      this.statsCards[3].value = formatCurrencyM(res.adminRevenue || 0);
+      this.statsCards[3].trend = 'Từ chiết khấu';
     });
 
-    // Giả sử backend không có đếm đúng role => fallback hiển thị đếm giả hoặc gọi API search role (nếu có)
-    // Tạm lấy một số từ số trang hoặc nếu backend trả về totalCount phù hợp
-    this.api.getUsers(1, 100).subscribe(res => {
-      // Đếm số user có role GV ở trang 1 làm số GV mẫu
-      const gvCount = (res.data || []).filter((u: any) => u.vaiTro === 'GiaoVien').length;
-      this.statsCards[1].value = gvCount > 0 ? gvCount.toString() : '5+';
-      this.statsCards[1].trend = 'Cập nhật mới';
-    });
 
     this.api.getCourses({ page: 1, pageSize: 1 }).subscribe(res => {
       this.statsCards[2].value = (res.totalCount || res.data?.length || 0).toString();
@@ -743,7 +756,7 @@ export class AdminDashboardComponent implements OnInit {
         const initials = u.ten ? u.ten.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) : 'KV';
         const gradients = [
           'linear-gradient(135deg, #28A745, #5BD67A)',
-          'linear-gradient(135deg, #5B63D3, #9DA4F0)',
+          'linear-gradient(135deg, var(--primary), var(--primary-light))',
           'linear-gradient(135deg, #FD7E14, #FDAA5E)',
           'linear-gradient(135deg, #8B5CF6, #A78BFA)'
         ];
