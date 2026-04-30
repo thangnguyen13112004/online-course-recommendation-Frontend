@@ -33,7 +33,7 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
           <div class="form-group">
             <label>Mật khẩu</label>
-            <input type="password" class="form-input" placeholder="••••••••"
+            <input type="password" class="form-input" placeholder="Mật khẩu"
                    [(ngModel)]="loginPassword" (keydown.enter)="onLogin()">
           </div>
           <div class="forgot-link">
@@ -275,7 +275,7 @@ export class AuthComponent {
     }
 
     this.loading.set(true);
-    this.authService.login(this.loginEmail, this.loginPassword).subscribe({
+    this.authService.login(this.loginEmail.trim(), this.loginPassword.trim()).subscribe({
       next: (res) => {
         this.authService.handleLoginSuccess(res);
         this.loading.set(false);

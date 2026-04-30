@@ -69,8 +69,8 @@ export class ApiService {
   }
 
   // Admin: cập nhật trạng thái khóa học (Published / Rejected / Draft / Pending)
-  updateCourseStatus(courseId: number, tinhTrang: string): Observable<any> {
-    return this.http.put(`${this.apiUrl}/courses/${courseId}/status`, { tinhTrang });
+  updateCourseStatus(courseId: number, tinhTrang: string, thoiGianChoPhepTre?: number): Observable<any> {
+    return this.http.put(`${this.apiUrl}/courses/${courseId}/status`, { tinhTrang, thoiGianChoPhepTre });
   }
 
   // ========================
@@ -120,8 +120,11 @@ export class ApiService {
     return this.http.post(`${this.apiUrl}/orders/checkout`, { phuongThucThanhToan });
   }
 
-  getOrders(page = 1, pageSize = 10): Observable<any> {
-    return this.http.get(`${this.apiUrl}/orders`, { params: { page, pageSize } });
+  getOrders(page = 1, pageSize = 10, search?: string, status?: string): Observable<any> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (search) params = params.set('search', search);
+    if (status) params = params.set('status', status);
+    return this.http.get(`${this.apiUrl}/orders`, { params });
   }
 
   // ========================
@@ -176,6 +179,17 @@ export class ApiService {
 
   updateUserStatus(userId: number, tinhTrang: string): Observable<any> {
     return this.http.put(`${this.apiUrl}/users/${userId}/status`, { tinhTrang });
+  }
+
+  // ========================
+  // NOTIFICATIONS
+  // ========================
+  getNotifications(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/users/notifications`);
+  }
+
+  markNotificationAsRead(id: number): Observable<any> {
+    return this.http.put(`${this.apiUrl}/users/notifications/${id}/read`, {});
   }
 
   // ========================
@@ -270,5 +284,23 @@ export class ApiService {
   getUserProfileRecommendations(userId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/recommendation/content-based/user-profile/${userId}`);
   }
-}
 
+  // ========================
+  // SYSTEM SETTINGS
+  // ========================
+  getSettings(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/settings`);
+  }
+
+  updateSettings(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/settings`, data);
+  }
+
+  getUserNotificationSettings(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/users/debugroute`);
+  }
+
+  updateUserNotificationSettings(settings: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/users/debugroute`, settings);
+  }
+}
