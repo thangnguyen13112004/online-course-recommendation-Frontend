@@ -67,19 +67,19 @@ import Swal from 'sweetalert2';
                 <input type="text" class="form-control" [(ngModel)]="jobTitle" placeholder="Vd: Giảng viên Senior Frontend">
               </div>
 
-              <div class="form-group">
-                <label>Tiểu sử / Tóm tắt chuyên môn</label>
-                <textarea class="form-control" rows="4" [(ngModel)]="bio" placeholder="Giới thiệu nhanh về bạn..."></textarea>
-              </div>
-              
-              <div class="form-actions">
-                <button class="btn btn-primary" [disabled]="isSaving" (click)="saveProfile()">
-                  <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isSaving"></i> 
-                  <i class="fa-solid fa-save" *ngIf="!isSaving"></i> {{ isSaving ? 'Đang lưu...' : 'Lưu hồ sơ' }}
-                </button>
-                <span class="save-success" *ngIf="saveSuccess"><i class="fa-solid fa-check"></i> Đã lưu thành công!</span>
-              </div>
-            </div>
+          <div class="form-group">
+            <label>Tiểu sử / Tóm tắt chuyên môn</label>
+            <textarea class="form-control" rows="4" [(ngModel)]="bio" placeholder="Giới thiệu nhanh về bạn, kinh nghiệm của bạn để hiển thị cho học viên..."></textarea>
+          </div>
+          
+          <div class="form-actions">
+            <button class="btn btn-primary" [disabled]="isSaving" (click)="saveProfile()">
+              <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isSaving"></i> 
+              <i class="fa-solid fa-save" *ngIf="!isSaving"></i> {{ isSaving ? 'Đang lưu...' : 'Lưu hồ sơ' }}
+            </button>
+            <span class="save-success" *ngIf="saveSuccess"><i class="fa-solid fa-check"></i> Đã lưu thành công!</span>
+          </div>
+        </div>
 
             <div class="section card">
               <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> Hiển thị</h3>
@@ -295,7 +295,7 @@ import Swal from 'sweetalert2';
 })
 export class InstructorSettingsComponent implements OnInit {
   private api = inject(ApiService);
-  private auth = inject(AuthService);
+  public authService = inject(AuthService);
 
   currentTab: 'profile' | 'payout' | 'notifications' = 'profile';
 
@@ -304,11 +304,14 @@ export class InstructorSettingsComponent implements OnInit {
   email = '';
   bio = '';
   avatarUrl = '';
+  degreeUrl = '';
 
   isSaving = false;
   saveSuccess = false;
   isSavingNotif = false;
   showBank = false;
+  isUploadingDegree = false;
+  degreeSuccess = false;
 
   instructorNotifications = [
     { id: 'enrollment', label: 'Học viên mới đăng ký', desc: 'Nhận email khi có học viên mới mua khóa học của bạn.', enabled: true },
@@ -323,19 +326,6 @@ export class InstructorSettingsComponent implements OnInit {
     this.loadNotifications();
   }
 
-  loadProfile() {
-    this.api.getUserProfile().subscribe({
-      next: (res) => {
-        if (res) {
-          this.fullName = res.ten || '';
-          this.email = res.email || '';
-          this.bio = res.tieuSu || '';
-          this.avatarUrl = res.linkAnhDaiDien || '';
-        }
-      }
-    });
-  }
-
   loadNotifications() {
     this.api.getUserNotificationSettings().subscribe({
       next: (res: any) => {
@@ -345,6 +335,25 @@ export class InstructorSettingsComponent implements OnInit {
             if (found) n.enabled = found.enabled;
           });
         }
+      }
+    });
+  }
+
+  loadProfile() {
+    this.api.getUserProfile().subscribe({
+      next: (res) => {
+        if (res) {
+          this.fullName = res.ten || '';
+          this.email = res.email || '';
+          this.bio = res.tieuSu || '';
+          this.avatarUrl = res.linkAnhDaiDien || '';
+          this.degreeUrl = res.hoSoBangCap || '';
+        }
+      },
+      error: (err) => {
+        console.error('Lỗi khi tải profile', err);
+        // Fallback to auth token claim just in case
+        this.fullName = this.authService.currentUser()?.userName || '';
       }
     });
   }
@@ -378,6 +387,25 @@ export class InstructorSettingsComponent implements OnInit {
     }
   }
 
+  onDegreeSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.isUploadingDegree = true;
+      this.api.uploadDegree(file).subscribe({
+        next: (res) => {
+          this.isUploadingDegree = false;
+          this.degreeSuccess = true;
+          this.degreeUrl = res.linkHoSo;
+          setTimeout(() => this.degreeSuccess = false, 4000);
+        },
+        error: (err) => {
+          this.isUploadingDegree = false;
+          alert(err.error?.message || 'Lỗi khi tải tài liệu.');
+        }
+      });
+    }
+  }
+
   saveProfile() {
     this.isSaving = true;
     this.saveSuccess = false;
@@ -390,9 +418,11 @@ export class InstructorSettingsComponent implements OnInit {
       next: () => {
         this.isSaving = false;
         this.saveSuccess = true;
-        const user = this.auth.currentUser();
+
+        // Update global auth state immediately
+        const user = this.authService.currentUser();
         if (user) {
-          this.auth.updateLocalUser({
+          this.authService.updateLocalUser({
             ...user,
             userName: this.fullName,
             avatar: this.avatarUrl
