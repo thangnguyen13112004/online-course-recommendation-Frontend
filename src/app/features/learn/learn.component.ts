@@ -86,9 +86,16 @@ import html2canvas from 'html2canvas';
                 <div [innerHTML]="formatContent(currentLesson.lyThuyet)" style="line-height: 1.8; font-size: 15px;"></div>
               </div>
               
-              <div *ngIf="currentLesson?.baiTap" style="padding: 20px; background: rgba(91,99,211,0.05); border-left: 4px solid var(--primary); border-radius: 4px;">
+              <div *ngIf="currentLesson?.baiTap" style="padding: 20px; background: rgba(91,99,211,0.05); border-left: 4px solid var(--primary); border-radius: 4px; margin-bottom: 30px;">
                 <h4 style="font-size: 16px; color: var(--primary); margin-bottom: 12px;"><i class="fa-solid fa-pen-to-square"></i> Bài tập</h4>
                 <div [innerHTML]="formatContent(currentLesson.baiTap)" style="line-height: 1.8; font-size: 15px;"></div>
+              </div>
+
+              <div *ngIf="currentLesson?.linkTaiLieu" style="padding: 20px; background: rgba(16,185,129,0.05); border-left: 4px solid var(--success); border-radius: 4px;">
+                <h4 style="font-size: 16px; color: var(--success); margin-bottom: 12px;"><i class="fa-solid fa-file-arrow-down"></i> Tài liệu đính kèm</h4>
+                <a [href]="getDocumentUrl(currentLesson.linkTaiLieu)" target="_blank" class="btn btn-success btn-sm" style="text-decoration: none;">
+                   <i class="fa-solid fa-download"></i> Tải xuống tài liệu
+                </a>
               </div>
             </div>
           </div>
@@ -122,7 +129,15 @@ import html2canvas from 'html2canvas';
             <div class="exercise-content" [innerHTML]="formatContent(currentLesson.baiTap)"></div>
           </div>
 
-          <div *ngIf="!currentLesson.lyThuyet && !currentLesson.baiTap" class="empty-content">
+          <!-- Tài liệu -->
+          <div class="document-section" *ngIf="currentLesson.linkTaiLieu" style="margin-bottom: 20px; padding: 16px; background: rgba(16,185,129,0.05); border-radius: 8px; border-left: 3px solid var(--success);">
+            <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--success);"><i class="fa-solid fa-file-arrow-down"></i> Tài liệu đính kèm</h4>
+            <a [href]="getDocumentUrl(currentLesson.linkTaiLieu)" target="_blank" class="btn btn-outline" style="width: 100%; border-color: var(--success); color: var(--success); text-decoration: none; display: inline-block; text-align: center;">
+              <i class="fa-solid fa-download"></i> Tải xuống / Xem tài liệu
+            </a>
+          </div>
+
+          <div *ngIf="!currentLesson.lyThuyet && !currentLesson.baiTap && !currentLesson.linkTaiLieu" class="empty-content">
             <i class="fa-solid fa-book-open" style="font-size: 32px; color: var(--gray-400); margin-bottom: 8px"></i>
             <p>Chưa có nội dung cho bài học này.</p>
           </div>
@@ -489,8 +504,15 @@ export class LearnComponent implements OnInit {
   }
 
   getVideoUrl(linkVideo: string): string {
+    if (!linkVideo) return '';
     if (linkVideo.startsWith('http')) return linkVideo;
     return 'http://localhost:5128' + linkVideo;
+  }
+
+  getDocumentUrl(linkTaiLieu: string): string {
+    if (!linkTaiLieu) return '';
+    if (linkTaiLieu.startsWith('http')) return linkTaiLieu;
+    return 'http://localhost:5128' + linkTaiLieu;
   }
 
   formatContent(text: string): SafeHtml {
