@@ -33,8 +33,14 @@ import Swal from 'sweetalert2';
              <span class="price">{{ course.price | number }}đ</span>
              <span class="original-price" *ngIf="course.price !== undefined && course.originalPrice !== undefined && course.originalPrice > course.price">{{ course.originalPrice | number }}đ</span>
           </div>
-          <button *ngIf="showCartBtn" class="btn-add-cart" (click)="addToCart($event)">
+          <button *ngIf="showCartBtn && !isEnrolled && !isInCart" class="btn-add-cart" (click)="addToCart($event)">
             <i class="fa-solid fa-cart-plus"></i> Thêm
+          </button>
+          <button *ngIf="showCartBtn && isInCart && !isEnrolled" class="btn-add-cart disabled" (click)="$event.stopPropagation()">
+            <i class="fa-solid fa-check"></i> Đã Thêm
+          </button>
+          <button *ngIf="showCartBtn && isEnrolled" class="btn-add-cart enrolled" (click)="goToDetail(); $event.stopPropagation()">
+            <i class="fa-solid fa-play"></i> Đã Sở Hữu
           </button>
         </div>
       </div>
@@ -156,11 +162,26 @@ import Swal from 'sweetalert2';
       align-items: center;
       gap: 6px;
     }
-    .btn-add-cart:hover {
+    .btn-add-cart:hover:not(.disabled):not(.enrolled) {
       background: #ea580c;
       color: #ffffff;
       border-color: #ea580c;
       box-shadow: 0 4px 10px rgba(234, 88, 12, 0.2);
+    }
+    .btn-add-cart.disabled {
+      background: #f1f5f9;
+      color: #94a3b8;
+      border-color: #e2e8f0;
+      cursor: default;
+    }
+    .btn-add-cart.enrolled {
+      background: #10b981;
+      color: #ffffff;
+      border-color: #10b981;
+    }
+    .btn-add-cart.enrolled:hover {
+      background: #059669;
+      border-color: #059669;
     }
   `]
 })
@@ -173,6 +194,14 @@ export class CourseCardComponent {
   private router = inject(Router);
   private authService = inject(AuthService);
   private dataService = inject(DataService);
+
+  get isInCart(): boolean {
+    return this.dataService.cartItems().some(item => item.course?.id === this.course?.id);
+  }
+
+  get isEnrolled(): boolean {
+    return this.dataService.enrolledCourses().some(ec => ec.course?.id === this.course?.id);
+  }
 
   goToDetail() {
     if (this.course?.id) {

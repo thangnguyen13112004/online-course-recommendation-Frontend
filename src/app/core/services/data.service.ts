@@ -51,6 +51,11 @@ export class DataService {
   constructor() {
     this.loadCategories();
     this.loadCourses();
+
+    if (this.auth.isLoggedIn()) {
+      this.loadCart();
+      this.loadMyCourses();
+    }
   }
 
   // ========================
