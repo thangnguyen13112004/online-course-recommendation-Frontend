@@ -601,6 +601,7 @@ export class DashboardComponent implements OnInit {
   public dataService = inject(DataService);
   public authService = inject(AuthService);
   private apiService = inject(ApiService);
+  private router = inject(Router);
 
   public router = inject(Router);
 
