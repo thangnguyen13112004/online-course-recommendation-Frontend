@@ -6,6 +6,7 @@ export const routes: Routes = [
   { path: 'course', loadComponent: () => import('./features/course-list/course-list.component').then(m => m.CourseListComponent) },
   { path: 'course/:id', loadComponent: () => import('./features/course-detail/course-detail.component').then(m => m.CourseDetailComponent) },
   { path: 'ai-recommendations', loadComponent: () => import('./features/ai-recommendations/ai-recommendations.component').then(m => m.AiRecommendationsComponent) },
+  { path: 'rag', loadComponent: () => import('./features/RAG/RAG.component').then(m => m.RagComponent) },
   { path: 'login', loadComponent: () => import('./features/auth/auth.component').then(m => m.AuthComponent) },
   { path: 'register', loadComponent: () => import('./features/auth/auth.component').then(m => m.AuthComponent) },
   { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
