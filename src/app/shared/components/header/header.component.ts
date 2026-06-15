@@ -20,6 +20,7 @@ import { DataService } from '../../../core/services/data.service';
           <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Trang chủ</a>
           <a routerLink="/course" routerLinkActive="active">Khóa học</a>
           <a routerLink="/ai-recommendations" routerLinkActive="active">AI Gợi ý</a>
+          <a routerLink="/rag" routerLinkActive="active">Trợ lý AI</a>
           <a *ngIf="authService.isLoggedIn()" routerLink="/dashboard" routerLinkActive="active">Học tập của tôi</a>
         </nav>
 
@@ -35,7 +36,7 @@ import { DataService } from '../../../core/services/data.service';
               <i class="fa-regular fa-bell"></i>
               <span class="notif-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
             </button>
-            
+
             <div class="notif-dropdown" *ngIf="showNotifs">
               <div class="notif-header">
                 <h4>Thông báo</h4>
@@ -73,7 +74,7 @@ import { DataService } from '../../../core/services/data.service';
                 <span class="user-link">{{ getProfileText() }} <i class="fa-solid fa-chevron-right"></i></span>
               </div>
             </div>
-            
+
             <button class="icon-action-btn logout-btn" (click)="logout()" title="Đăng xuất" aria-label="Đăng xuất">
               <i class="fa-solid fa-arrow-right-from-bracket"></i>
             </button>
@@ -223,7 +224,7 @@ import { DataService } from '../../../core/services/data.service';
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
     }
-    
+
     .icon-action-btn:hover {
       background: var(--clr-bg-light);
       color: var(--clr-text-main);
@@ -304,25 +305,25 @@ import { DataService } from '../../../core/services/data.service';
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    
+
     .user-menu-pill:hover {
       background: var(--clr-bg-light);
       border-color: #d1d5db;
     }
-    
+
     .avatar-wrapper {
       width: 36px;
       height: 36px;
       position: relative;
     }
-    
+
     .user-avatar {
       width: 100%;
       height: 100%;
       border-radius: 50%;
       object-fit: cover;
     }
-    
+
     .avatar-gradient {
       width: 100%;
       height: 100%;
@@ -335,20 +336,20 @@ import { DataService } from '../../../core/services/data.service';
       font-weight: 800;
       font-size: 14px;
     }
-    
+
     .user-info {
       display: flex;
       flex-direction: column;
       justify-content: center;
     }
-    
+
     .user-name {
       color: var(--clr-text-main);
       font-weight: 700;
       font-size: 14px;
       line-height: 1.2;
     }
-    
+
     .user-link {
       color: var(--clr-text-muted);
       font-size: 12px;
@@ -358,16 +359,16 @@ import { DataService } from '../../../core/services/data.service';
       gap: 4px;
       margin-top: 2px;
     }
-    
+
     .user-menu-pill:hover .user-link {
       color: var(--clr-brand);
     }
-    
+
     .user-link i {
       font-size: 10px;
       transition: transform 0.2s ease;
     }
-    
+
     .user-menu-pill:hover .user-link i {
       transform: translateX(2px);
     }

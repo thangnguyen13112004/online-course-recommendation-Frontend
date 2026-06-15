@@ -10,6 +10,14 @@ export class ApiService {
   constructor(private http: HttpClient) { }
 
   // ========================
+  // AI ASSISTANT (RAG)
+  // ========================
+  searchCoursesByAI(query: string): Observable<any> {
+    const params = new HttpParams().set('query', query);
+    return this.http.get(`${this.apiUrl}/RAG/search`, { params });
+  }
+
+  // ========================
   // COURSES
   // ========================
   getCourses(params?: {
@@ -357,6 +365,10 @@ export class ApiService {
   // ========================
   // RECOMMENDATIONS (Neo4j)
   // ========================
+  getAlsRecommendations(userId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/Recommendation/als/${userId}`);
+  }
+
   getPopularCourses(): Observable<any> {
     return this.http.get(`${this.apiUrl}/recommendation/popular`);
   }

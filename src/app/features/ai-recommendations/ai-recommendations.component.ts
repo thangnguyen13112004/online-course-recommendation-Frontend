@@ -57,6 +57,31 @@ import { ApiService } from '../../core/services/api.service';
 
           <section class="ai-section mt-5">
             <div class="section-header">
+              <div class="icon-pulse green"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+              <div>
+                <h2>Có thể bạn sẽ thích</h2>
+                <p class="text-muted" style="margin-top: 4px; font-size: 14px;">Được cá nhân hóa bởi mô hình AI Matrix Factorization (ALS) phân tích sở thích sâu của bạn.</p>
+              </div>
+            </div>
+
+            <div *ngIf="loadingAls" class="course-grid">
+              <div *ngFor="let i of skeletonCards" class="recommendation-skeleton"></div>
+            </div>
+
+            <div *ngIf="!loadingAls && alsCourses.length > 0" class="course-grid">
+              <app-course-card
+                *ngFor="let course of alsCourses"
+                [course]="course"
+                [showCartBtn]="true">
+              </app-course-card>
+            </div>
+            <div *ngIf="!loadingAls && alsCourses.length === 0" class="empty-msg">
+              AI đang học hỏi từ hành vi của bạn. Hãy đánh giá thêm khóa học để mô hình đưa ra gợi ý chính xác hơn.
+            </div>
+          </section>
+
+          <section class="ai-section mt-5">
+            <div class="section-header">
               <div class="icon-pulse blue"><i class="fa-solid fa-address-card"></i></div>
               <div>
                 <h2>Người học tương tự bạn cũng xem</h2>
@@ -249,6 +274,9 @@ export class AiRecommendationsComponent implements OnInit {
   loadingProfile = false;
   loadingRelated = false;
 
+  alsCourses: any[] = []; // Chứa danh sách khóa học từ ALS
+  loadingAls = false;
+
   skeletonCards = [1, 2, 3, 4];
 
   ngOnInit() {
@@ -257,11 +285,21 @@ export class AiRecommendationsComponent implements OnInit {
         const userId = Number(profile?.maNguoiDung ?? profile?.id ?? 0);
         if (userId) {
           this.loadTrending(userId);
+          this.loadAlsRecommendations(userId);
           this.loadProfileBased(userId);
           this.loadRelatedFromAllEnrolled();
         }
       });
     }
+  }
+  private loadAlsRecommendations(userId: number) {
+    this.loadingAls = true;
+    this.apiService.getAlsRecommendations(userId).pipe(
+      catchError(() => of([])),
+      finalize(() => this.loadingAls = false)
+    ).subscribe((res: any) => {
+      this.alsCourses = this.normalizeAndMap(res).slice(0, 4); // Lấy top 4 khóa học tối ưu
+    });
   }
 
   // 1. Call API user-based (Có Fallback sang Popular Courses)
