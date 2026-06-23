@@ -1,5 +1,3 @@
-<img width="1007" height="564" alt="image" src="https://github.com/user-attachments/assets/2cac636a-2467-4745-bc7d-d94a7a9ce2b0" />## 🌐 Live Demo & Testing Accounts
-
 * **Deployment Link:** [http://khoa-hoc-elearning.me/course](http://khoa-hoc-elearning.me/course)
 
 ### 📸 Application Previews
