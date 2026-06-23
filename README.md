@@ -1,68 +1,27 @@
-# Edulearn
+<img width="1007" height="564" alt="image" src="https://github.com/user-attachments/assets/2cac636a-2467-4745-bc7d-d94a7a9ce2b0" />## 🌐 Live Demo & Testing Accounts
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.5.
+* **Deployment Link:** [http://khoa-hoc-elearning.me/course](http://khoa-hoc-elearning.me/course)
 
-## Setup & Installation
+### 📸 Application Previews
 
-Before running the project for the first time, you need to install the dependencies:
+#### **Multi-Container App Deployment on Azure Linux VM**
+<img width="1042" height="574" alt="image" src="https://github.com/user-attachments/assets/8c1099e0-6b04-42d9-a9ef-24540f8d17ff" />
 
-```bash
-npm install
-```
+#### **System Architecture**
+<img width="1007" height="564" alt="image" src="https://github.com/user-attachments/assets/e448eeb2-71a3-4aea-b121-a6d473e90f4a" />
 
-## Development server
 
-To start a local development server, run:
+---
 
-```bash
-npm start
-```
-*(Note: `npm start` runs the `ng serve` command using the local Angular CLI)*
+### 🔑 Demo Credentials
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+To fully explore the platform's multi-tenant capabilities, you can log in using the credentials below. 
 
-## Code scaffolding
+* **Password for all accounts:** `123456`
+* **💡 Password Reset Note:** If you encounter any login issues, please use the **"Forgot Password"** feature on the website to automatically reset the password back to `123456`.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+| Role | Test Email |
+| :--- | :--- |
+| **Student** (Học viên) | `user3615@elearn.vn` |
+| **Instructor** (Giảng viên) | `gv10285@elearn.vn` |
+| **Administrator** (Quản trị viên) | `admin@elearn.vn` |
