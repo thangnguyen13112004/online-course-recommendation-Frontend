@@ -603,8 +603,6 @@ export class DashboardComponent implements OnInit {
   private apiService = inject(ApiService);
   private router = inject(Router);
 
-  public router = inject(Router);
-
   showAllOngoing = false;
   showAllCompleted = false;
   showAllCertificates = false;
