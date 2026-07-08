@@ -644,8 +644,6 @@ export class DashboardComponent implements OnInit {
           id: courseId,
           title: title,
           image: image,
-          // API Chứng chỉ hiện tại không trả về Giảng viên và Số chương,
-          // nên ta để giá trị mặc định để giao diện không bị lỗi undefined
           instructor: 'Khóa học',
           modules: '-'
         },
