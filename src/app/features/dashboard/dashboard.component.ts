@@ -603,8 +603,6 @@ export class DashboardComponent implements OnInit {
   private apiService = inject(ApiService);
   private router = inject(Router);
 
-  public router = inject(Router);
-
   showAllOngoing = false;
   showAllCompleted = false;
   showAllCertificates = false;
@@ -636,10 +634,7 @@ export class DashboardComponent implements OnInit {
   }
 
   get completedCourses() {
-    // HƯỚNG 1: Sử dụng danh sách chứng chỉ để render các khóa học đã hoàn thành
     return this.dataService.certificates().map((cert: any) => {
-      // Lấy thông tin khóa học từ dữ liệu chứng chỉ
-      // (Dự phòng cho cả trường hợp lấy data thô từ API hoặc đã qua DataService map)
       const courseId = cert.khoaHoc?.maKhoaHoc || cert.courseId || 0;
       const title = cert.khoaHoc?.tieuDe || cert.courseName || 'Khóa học đã hoàn thành';
       const image = cert.khoaHoc?.anhUrl || '';
@@ -649,8 +644,6 @@ export class DashboardComponent implements OnInit {
           id: courseId,
           title: title,
           image: image,
-          // API Chứng chỉ hiện tại không trả về Giảng viên và Số chương,
-          // nên ta để giá trị mặc định để giao diện không bị lỗi undefined
           instructor: 'Khóa học',
           modules: '-'
         },
